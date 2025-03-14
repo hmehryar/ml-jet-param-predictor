@@ -1,0 +1,13 @@
+tensorflowtensorflow
+tensorflow-addons
+numpy
+matplotlib
+PyYAML
+wandb
+tensorboard
+tensorflow-addons
+numpy
+matplotlib
+PyYAML
+wandb
+tensorboard

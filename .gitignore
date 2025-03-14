@@ -1,0 +1,21 @@
+# Ignore data files and large raw data
+*.npy
+*.npz
+data/raw/
+data/processed/
+dataset_splits/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# TensorFlow checkpoints, logs
+checkpoints/
+logs/
+wandb/
+
+# VS Code settings
+.vscode/
