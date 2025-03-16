@@ -85,3 +85,6 @@ if __name__ == "__main__":
     model = create_model()
     model.build(input_shape=(None, 32, 32, 1))
     model.summary()
+
+# Example input to test the model
+# python models/model.py

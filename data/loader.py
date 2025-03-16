@@ -253,3 +253,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Example usage:
+#python data/loader.py --root_dir ~/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000_balanced_unshuffled --global_max 121.79151153564453 --batch_size 512
