@@ -1,10 +1,12 @@
 # loader.py
 
 import os
+import csv
 import numpy as np
 import tensorflow as tf
 from collections import defaultdict
 import argparse
+
 
 # -------------------------------
 # 1. Directory to Label Mapping
@@ -15,7 +17,7 @@ q0_map = {"1": 0, "1.5": 1, "2.0": 2, "2.5": 3}
 
 
 def parse_labels_from_dir(dir_name):
-    """Parse directory name to label tuple (energy_loss, alpha_s, q0)."""
+    """Parse directory name into label tuple (energy_loss, alpha_s, q0)."""
     energy_loss_str, alpha_str, q0_str = dir_name.split('_')
     energy_loss = 0 if energy_loss_str == "MMAT" else 1
     alpha = alpha_map[alpha_str]
@@ -28,7 +30,7 @@ def parse_labels_from_dir(dir_name):
 # -----------------------------------------
 
 def file_label_generator(root_dir):
-    """Yield (file_path, label_tuple) from dataset directory structure."""
+    """Yield (file_path, label_tuple) for all files in dataset."""
     for dir_name in os.listdir(root_dir):
         dir_path = os.path.join(root_dir, dir_name)
         if os.path.isdir(dir_path):
@@ -38,53 +40,33 @@ def file_label_generator(root_dir):
                     file_path = os.path.join(dir_path, file_name)
                     yield file_path, label_tuple
 
+def save_file_label_list(file_label_list, filename, root_dir):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['file_path', 'energy_loss', 'alpha', 'q0'])
+        for file_path, (energy_loss, alpha, q0) in file_label_list:
+            relative_path = os.path.relpath(file_path, root_dir)
+            writer.writerow([relative_path, energy_loss, alpha, q0])
 
-# ---------------------------------------------------
-# 3. TensorFlow Dataset Generator (Lazy loading .npy)
-# ---------------------------------------------------
-
-def tf_dataset_generator(file_label_list, global_max):
-    """TensorFlow-compatible generator that yields normalized event data and labels."""
-    for file_path, label in file_label_list:
-        event = np.load(file_path).astype(np.float32)
-        event = event / global_max  # Normalize assuming global_min = 0
-        event = np.expand_dims(event, axis=-1)  # Add channel dimension (32, 32, 1)
-        yield event, np.array(label, dtype=np.int32)
-
-
-# --------------------------------------------
-# 4. TensorFlow Dataset Pipeline Construction
-# --------------------------------------------
-
-def build_tf_dataset(file_label_list, global_max, batch_size=512, buffer_size=10000, shuffle=True):
-    """
-    Build TensorFlow Dataset pipeline with shuffling, batching, and prefetching.
-    """
-    dataset = tf.data.Dataset.from_generator(
-        lambda: tf_dataset_generator(file_label_list, global_max),
-        output_signature=(
-            tf.TensorSpec(shape=(32, 32, 1), dtype=tf.float32),
-            tf.TensorSpec(shape=(3,), dtype=tf.int32)
-        )
-    )
-
-    if shuffle:
-        dataset = dataset.shuffle(buffer_size=buffer_size)
-
-    dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
-    return dataset
+def load_file_label_list(filename, root_dir):
+    result = []
+    with open(filename, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            relative_path = row['file_path']
+            absolute_path = os.path.join(root_dir, relative_path)
+            label = (int(row['energy_loss']), int(row['alpha']), int(row['q0']))
+            result.append((absolute_path, label))
+    return result
 
 
 # ----------------------------------------------------------
-# 5. Stratified Split for Train/Val/Test with Random Seed
+# 3. Stratified Split for Train/Val/Test (Balanced and Stable)
 # ----------------------------------------------------------
 
 def split_file_list(file_label_list, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1, random_seed=42):
-    """
-    Perform a stratified split on (file_path, label_tuple) into train, validation, and test sets.
-    """
+    """Stratified split on (file_path, label_tuple)."""
     np.random.seed(random_seed)
-
     label_to_files = defaultdict(list)
     for file_path, label in file_label_list:
         label_to_files[label].append(file_path)
@@ -95,7 +77,6 @@ def split_file_list(file_label_list, train_ratio=0.8, val_ratio=0.1, test_ratio=
         files = np.array(files)
         np.random.shuffle(files)
         total = len(files)
-
         train_end = int(train_ratio * total)
         val_end = train_end + int(val_ratio * total)
 
@@ -119,39 +100,156 @@ def split_file_list(file_label_list, train_ratio=0.8, val_ratio=0.1, test_ratio=
     return train_list, val_list, test_list
 
 
-# --------------------------
-# 6. Main CLI Entry Point
-# --------------------------
+# ---------------------------------------------------
+# 4. TensorFlow Dataset Generator (Lazy loading .npy)
+# ---------------------------------------------------
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TensorFlow DataLoader for ML-JET dataset")
+def tf_dataset_generator(file_label_list, global_max):
+    """TensorFlow-compatible generator yielding normalized events and multi-output labels."""
+    for file_path, label in file_label_list:
+        event = np.load(file_path).astype(np.float32)
+        event = event / global_max  # Normalize to [0, 1]
+        event = np.expand_dims(event, axis=-1)  # Shape: (32, 32, 1)
+
+        energy_loss_label = np.array([label[0]], dtype=np.float32)  # (1,)
+        alpha_label = tf.one_hot(label[1], depth=3, dtype=tf.float32)  # (3,)
+        q0_label = tf.one_hot(label[2], depth=4, dtype=tf.float32)  # (4,)
+
+        yield event, {
+            'energy_loss_output': energy_loss_label,
+            'alpha_output': alpha_label,
+            'q0_output': q0_label
+        }
+
+
+# --------------------------------------------
+# 5. TensorFlow Dataset Pipeline Construction
+# --------------------------------------------
+
+def build_tf_dataset(file_label_list, global_max, batch_size=512, buffer_size=10000, shuffle=True):
+    """Build TensorFlow Dataset pipeline with shuffling, batching, and prefetching."""
+    dataset = tf.data.Dataset.from_generator(
+        lambda: tf_dataset_generator(file_label_list, global_max),
+        output_signature=(
+            tf.TensorSpec(shape=(32, 32, 1), dtype=tf.float32),
+            {
+                'energy_loss_output': tf.TensorSpec(shape=(1,), dtype=tf.float32),
+                'alpha_output': tf.TensorSpec(shape=(3,), dtype=tf.float32),
+                'q0_output': tf.TensorSpec(shape=(4,), dtype=tf.float32)
+            }
+        )
+    )
+
+    if shuffle:
+        dataset = dataset.shuffle(buffer_size=buffer_size)
+
+    dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return dataset
+
+# -------------------------------
+# Split Saving/Loading Utilities
+# -------------------------------
+
+def save_split_to_csv(file_label_list, filename, root_dir):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['file_path', 'energy_loss', 'alpha', 'q0'])
+        for file_path, (energy_loss, alpha, q0) in file_label_list:
+            relative_path = os.path.relpath(file_path, root_dir)  # Make path relative
+            writer.writerow([relative_path, energy_loss, alpha, q0])
+
+
+def load_split_from_csv(filename, root_dir):
+    result = []
+    with open(filename, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            relative_path = row['file_path']
+            absolute_path = os.path.join(root_dir, relative_path)  # Rebuild full path
+            label = (int(row['energy_loss']), int(row['alpha']), int(row['q0']))
+            result.append((absolute_path, label))
+    return result
+
+# -------------------------------
+# 6. Main Function for Testing
+# -------------------------------
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="TensorFlow DataLoader for ML-JET dataset with smart caching and splits")
     parser.add_argument('--root_dir', type=str, required=True, help='Path to dataset root directory')
     parser.add_argument('--global_max', type=float, required=True, help='Global max for normalization')
     parser.add_argument('--batch_size', type=int, default=512, help='Batch size for DataLoader')
-    parser.add_argument('--buffer_size', type=int, default=10000, help='Buffer size for shuffling')
+    parser.add_argument('--buffer_size', type=int, default=10000, help='Shuffle buffer size')
     parser.add_argument('--random_seed', type=int, default=42, help='Random seed for reproducibility')
     args = parser.parse_args()
 
-    root_dir = args.root_dir
-    global_max = args.global_max
-    batch_size = args.batch_size
-    buffer_size = args.buffer_size
-    random_seed = args.random_seed
+    # File names inside dataset root
+    train_file = os.path.join(args.root_dir, "train_files.csv")
+    val_file = os.path.join(args.root_dir, "val_files.csv")
+    test_file = os.path.join(args.root_dir, "test_files.csv")
+    file_label_cache = os.path.join(args.root_dir, "file_labels.csv")
 
-    file_label_list = list(file_label_generator(root_dir))
-    print(f"Total files found: {len(file_label_list)}")
-    if file_label_list:
-        print("Example file-label pair:", file_label_list[0])
+    # -------------------------------
+    # Priority Check 1: Splits exist?
+    # -------------------------------
+    if os.path.exists(train_file) and os.path.exists(val_file) and os.path.exists(test_file):
+        print(f"[INFO] Found existing splits in '{args.root_dir}'. Loading splits directly...")
+        train_list = load_split_from_csv(train_file, args.root_dir)
+        val_list = load_split_from_csv(val_file, args.root_dir)
+        test_list = load_split_from_csv(test_file, args.root_dir)
 
-    # Perform stratified split
-    train_list, val_list, test_list = split_file_list(file_label_list, random_seed=random_seed)
+    else:
+        print(f"[INFO] Splits not found. Checking for cached file-label list...")
 
-    # Build TensorFlow Datasets
-    train_dataset = build_tf_dataset(train_list, global_max, batch_size=batch_size, buffer_size=buffer_size, shuffle=True)
-    val_dataset = build_tf_dataset(val_list, global_max, batch_size=batch_size, buffer_size=buffer_size, shuffle=False)
-    test_dataset = build_tf_dataset(test_list, global_max, batch_size=batch_size, buffer_size=buffer_size, shuffle=False)
+        # -------------------------------
+        # Priority Check 2: File label list exists?
+        # -------------------------------
+        if os.path.exists(file_label_cache):
+            print(f"[INFO] Found cached file-label list '{file_label_cache}'.")
+            file_label_list = load_file_label_list(file_label_cache, args.root_dir)
+        else:
+            print(f"[INFO] Cached file-label list not found. Scanning dataset directory to generate...")
+            file_label_list = list(file_label_generator(args.root_dir))
+            print(f"[INFO] Total files found: {len(file_label_list)}")
+            save_file_label_list(file_label_list, file_label_cache, args.root_dir)
+            print(f"[INFO] File-label list cached to '{file_label_cache}'.")
 
-    # Example: Check one batch
-    for batch_images, batch_labels in train_dataset.take(1):
-        print("Batch images shape:", batch_images.shape)
-        print("Batch labels shape:", batch_labels.shape)
+        # Now split the loaded/generated file-label list
+        print("[INFO] Performing stratified split...")
+        train_list, val_list, test_list = split_file_list(file_label_list, random_seed=args.random_seed)
+
+        print(f"Training set size: {len(train_list)}")
+        print(f"Validation set size: {len(val_list)}")
+        print(f"Test set size: {len(test_list)}")
+
+        # Save splits for future use
+        save_split_to_csv(train_list, train_file, args.root_dir)
+        save_split_to_csv(val_list, val_file, args.root_dir)
+        save_split_to_csv(test_list, test_file, args.root_dir)
+        print(f"[INFO] Splits saved inside dataset root '{args.root_dir}'.")
+
+    # -------------------------------
+    # TensorFlow Dataset Pipeline
+    # -------------------------------
+    print("[INFO] Building TensorFlow datasets for training/validation/testing...")
+    train_dataset = build_tf_dataset(train_list, args.global_max, batch_size=args.batch_size, buffer_size=args.buffer_size, shuffle=True)
+    val_dataset = build_tf_dataset(val_list, args.global_max, batch_size=args.batch_size, buffer_size=args.buffer_size, shuffle=False)
+    test_dataset = build_tf_dataset(test_list, args.global_max, batch_size=args.batch_size, buffer_size=args.buffer_size, shuffle=False)
+
+    print("[INFO] Dataset pipeline built successfully. Example batch:")
+
+    for x, y in train_dataset.take(1):
+        print("Input batch shape:", x.shape)
+        print("Energy Loss label batch shape:", y['energy_loss_output'].shape)
+        print("Alpha label batch shape:", y['alpha_output'].shape)
+        print("Q0 label batch shape:", y['q0_output'].shape)
+
+    print("✅ DataLoader pipeline ready with smart caching and split management.")
+
+
+# -------------------------------
+# Entry Point for Command-Line
+# -------------------------------
+
+if __name__ == "__main__":
+    main()
