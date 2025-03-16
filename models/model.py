@@ -54,7 +54,7 @@ class MultiHeadClassifier(Model):
 # Model Creation Helper
 # ---------------------------
 
-def create_model(backbone='efficientnet', input_shape=(32, 32, 1)):
+def create_model(backbone='efficientnet', input_shape=(32, 32, 1),learning_rate=0.001):
     """
     Helper to create an instance of MultiHeadClassifier.
     """
@@ -62,7 +62,7 @@ def create_model(backbone='efficientnet', input_shape=(32, 32, 1)):
 
     # Compile model with multiple losses (can be adjusted in training script)
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss={
             'energy_loss_output': tf.keras.losses.BinaryCrossentropy(),
             'alpha_output': tf.keras.losses.CategoricalCrossentropy(),
