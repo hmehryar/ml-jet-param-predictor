@@ -42,7 +42,12 @@ class MultiHeadClassifier(Model):
         alpha_output = self.alpha_head(x)
         q0_output = self.q0_head(x)
 
-        return energy_output, alpha_output, q0_output
+        # return energy_output, alpha_output, q0_output
+        return {
+        'energy_loss_output': energy_output,
+        'alpha_output': alpha_output,
+        'q0_output': q0_output
+        }
 
 
 # ---------------------------
