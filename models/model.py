@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, Model
 
 # ---------------------------
-# Multi-Head Classifier Model
+# Multi-Head Classifier Model with Flexible Backbone
 # ---------------------------
 
 class MultiHeadClassifier(Model):
@@ -12,7 +12,7 @@ class MultiHeadClassifier(Model):
         super(MultiHeadClassifier, self).__init__()
 
         # ----------------------
-        # Shared Backbone
+        # Shared Backbone (Flexible)
         # ----------------------
         if backbone == 'efficientnet':
             self.backbone = tf.keras.applications.EfficientNetV2B0(
@@ -22,8 +22,28 @@ class MultiHeadClassifier(Model):
                 pooling='avg'
             )
         elif backbone == 'convnext':
-            # Example placeholder for ConvNeXt if added later
-            raise NotImplementedError("ConvNeXt backbone not implemented yet.")
+            raise NotImplementedError("ConvNeXt backbone is not yet available in this TensorFlow/Keras setup. Consider using EfficientNet for now.")
+
+            # ConvNeXtV2B0
+            self.backbone = tf.keras.applications.ConvNeXtBase(  # Placeholder, validate available models
+                    include_top=False,
+                    input_shape=input_shape, 
+                    weights=None, 
+                    pooling='avg'
+            )
+        elif backbone == 'swin':
+            raise NotImplementedError("SwinV2 is not implemented in TensorFlow yet. Future extension planned.")
+        
+            # Placeholder: TensorFlow doesn't have official Swin, but if using keras_cv or hub:
+            from keras_cv.models import SwinTransformerV2Tiny
+            self.backbone = keras_cv.models.SwinTransformerV2B0(  # Placeholder, validate
+                include_top=False, input_shape=input_shape, weights=None, pooling='avg'
+            )
+        elif backbone == 'mamba':
+            raise NotImplementedError("Mamba model requires PyTorch implementation. Future integration possible.")
+
+            # To be implemented carefully (if TensorFlow version exists or wrapped PyTorch)
+            raise NotImplementedError("Mamba backbone requires custom implementation (not available in TF).")
         else:
             raise ValueError("Unsupported backbone selected.")
 
@@ -81,10 +101,48 @@ def create_model(backbone='efficientnet', input_shape=(32, 32, 1),learning_rate=
 # Example Usage (Optional)
 # ---------------------------
 
-if __name__ == "__main__":
-    model = create_model()
-    model.build(input_shape=(None, 32, 32, 1))
-    model.summary()
+# if __name__ == "__main__":
+#     model = create_model()
+#     model.build(input_shape=(None, 32, 32, 1))
+#     model.summary()
 
 # Example input to test the model
 # python models/model.py
+# python models/model.py --backbone efficientnet
+# python models/model.py --backbone convnext
+# python models/model.py --backbone swin
+# python models/model.py --backbone mamba
+
+if __name__ == "__main__":
+    import argparse
+
+    # -------------------------------
+    # Argument Parser for Backbone Testing
+    # -------------------------------
+    parser = argparse.ArgumentParser(description="Test different backbone models for ML-JET multi-head classifier.")
+    parser.add_argument('--backbone', type=str, default='efficientnet',
+                        help='Backbone model to test (options: efficientnet, convnext, swin, mamba)')
+    parser.add_argument('--input_shape', type=int, nargs=3, default=[32, 32, 1],
+                        help='Input shape as three integers (default: 32 32 1)')
+    parser.add_argument('--learning_rate', type=float, default=0.001,
+                        help='Learning rate (default: 0.001)')
+    args = parser.parse_args()
+
+    print(f"\n[INFO] Testing backbone: {args.backbone}")
+    print(f"[INFO] Input shape: {args.input_shape}")
+    print(f"[INFO] Learning rate: {args.learning_rate}")
+
+    # -------------------------------
+    # Create and Build Model
+    # -------------------------------
+    model = create_model(backbone=args.backbone,
+                         input_shape=tuple(args.input_shape),
+                         learning_rate=args.learning_rate)
+    
+    model.build(input_shape=(None, *args.input_shape))
+
+    # -------------------------------
+    # Print Model Summary
+    # -------------------------------
+    model.summary()
+
