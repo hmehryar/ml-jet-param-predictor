@@ -170,6 +170,39 @@ def load_split_from_csv(filename, root_dir):
             result.append((absolute_path, label))
     return result
 
+def calculate_global_min_with_tf(root_dir):
+    """Calculate global minimum value in the dataset using TensorFlow and GPU acceleration."""
+    # Ensure TensorFlow is using GPU
+    device_name = tf.config.list_physical_devices('GPU')
+    if not device_name:
+        print("No GPU detected, defaulting to CPU.")
+        return None
+
+    global_min = float('inf')  # Start with an infinitely large value
+
+    for dir_name in os.listdir(root_dir):
+        dir_path = os.path.join(root_dir, dir_name)
+        if os.path.isdir(dir_path):
+            for file_name in os.listdir(dir_path):
+                if file_name.endswith(".npy"):
+                    file_path = os.path.join(dir_path, file_name)
+                    
+                    # Load the event data from the .npy file
+                    event_data = np.load(file_path).astype(np.float32)
+                    
+                    # Move data to GPU (if available)
+                    event_data_tensor = tf.convert_to_tensor(event_data)
+                    
+                    # Calculate the minimum on the GPU
+                    file_min = tf.reduce_min(event_data_tensor).numpy()  # .numpy() to bring it back to CPU
+
+                    # Update the global minimum
+                    if file_min < global_min:
+                        global_min = file_min
+
+    return global_min
+
+
 # -------------------------------
 # 6. Main Function for Testing
 # -------------------------------
@@ -183,6 +216,16 @@ def main():
     parser.add_argument('--random_seed', type=int, default=42, help='Random seed for reproducibility')
     args = parser.parse_args()
 
+    # Calculate global minimum using TensorFlow GPU (if available)
+    print("[INFO] Calculating global minimum using TensorFlow (GPU accelerated)...")
+    global_min = calculate_global_min_with_tf(args.root_dir)
+    
+    if global_min is None:
+        print("[ERROR] Failed to calculate global minimum.")
+        return
+    
+    print(f"[INFO] Global minimum value in dataset: {global_min}")
+    return
     # File names inside dataset root
     train_file = os.path.join(args.root_dir, "train_files.csv")
     val_file = os.path.join(args.root_dir, "val_files.csv")
