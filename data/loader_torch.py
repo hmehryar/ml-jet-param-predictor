@@ -187,7 +187,7 @@ def main():
     # Priority Check 1: Splits exist?
     # -------------------------------
     if os.path.exists(train_file) and os.path.exists(val_file) and os.path.exists(test_file):
-        print(f"[INFO] Found existing splits in '{args.root_dir}'. Loading splits directly...")
+        print(f"[INFO] Found existing splits in \n'{args.root_dir}'.\n Loading splits directly...")
         train_list = load_split_from_csv(train_file, args.root_dir)
         val_list = load_split_from_csv(val_file, args.root_dir)
         test_list = load_split_from_csv(test_file, args.root_dir)
