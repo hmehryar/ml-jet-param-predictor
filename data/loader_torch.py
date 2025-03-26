@@ -122,9 +122,9 @@ class JetDataset(Dataset):
         event = np.expand_dims(event, axis=0)  # Shape: (1, 32, 32) for PyTorch
         
         # Convert labels to tensors
-        energy_loss_label = torch.tensor([label[0]], dtype=torch.float32)  # (1,)
-        alpha_label = torch.tensor(label[1], dtype=torch.long)             # (3-class)
-        q0_label = torch.tensor(label[2], dtype=torch.long)                # (4-class)
+        energy_loss_label = torch.tensor([label[0]], dtype=torch.long)  # (1,)
+        alpha_label = torch.tensor([label[1]], dtype=torch.long)             # (3-class)
+        q0_label = torch.tensor([label[2]], dtype=torch.long)                # (4-class)
 
         labels = {
             'energy_loss_output': energy_loss_label,
@@ -235,7 +235,7 @@ def main():
     x, labels = train_dataset[0]
     print(f"Input batch shape: {x.shape}")
     for key, value in labels.items():
-        print(f"Label - {key}: {value.shape}")
+        print(f"Label - {key}: {value.size()}")
 
     print("✅ DataLoader pipeline ready with smart caching and split management.")
 
