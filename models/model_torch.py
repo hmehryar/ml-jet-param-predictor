@@ -10,7 +10,7 @@ import argparse
 
 
 class MultiHeadClassifier(nn.Module):
-    def __init__(self, backbone='efficientnet', input_shape=(1, 32, 32)):
+    def __init__(self, backbone='efficientnet', input_shape=(1, 32, 32), d_model=512):
         super(MultiHeadClassifier, self).__init__()
 
         self.backbone_name = backbone.lower()
@@ -18,32 +18,59 @@ class MultiHeadClassifier(nn.Module):
         # ----------------------
         # Shared Backbone (Flexible)
         # ----------------------
+
         if self.backbone_name == 'efficientnet':
             # EfficientNet: Modify input layer to accept 1 channel instead of 3
             self.backbone = timm.create_model('efficientnet_b0', pretrained=False, num_classes=0)
             self.backbone.conv_stem = nn.Conv2d(1, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+            self.features = self.backbone
         elif self.backbone_name == 'convnext':
             # ConvNeXt: Modify input layer to accept 1 channel instead of 3
             self.backbone = timm.create_model('convnext_base', pretrained=False, num_classes=0)
             self.backbone.stem[0] = nn.Conv2d(1, 96, kernel_size=(4, 4), stride=(4, 4), padding=(1, 1), bias=False)  # Adjust the first conv layer
+            self.backbone.norm = nn.LayerNorm(96)  # Adjust normalization layer (optional, depending on the model)
+            self.features = self.backbone
         elif self.backbone_name == 'swin':
+            # SwinV2: Use the pre-trained model, no need to extract backbone separately
             self.backbone = SwinForImageClassification.from_pretrained("microsoft/swin-base-patch4-window7-224")
-            self.backbone = self.backbone.backbone  # Extract only the backbone part of SwinV2
+            self.features = self.backbone.config  # No need to extract 'backbone' because it includes everything
+            self.features.num_features = self.backbone.config.hidden_size  # No need to extract 'backbone' because it includes everything
         elif self.backbone_name == 'mamba':
-            self.backbone = Mamba()  # Assuming we have Mamba integrated for state-space models
+             # Mamba: Pass d_model to Mamba initialization
+             # Use a CNN backbone to process images and convert them into sequences
+            self.backbone = timm.create_model('efficientnet_b0', pretrained=True, num_classes=0)  # Feature extractor (no classification head)
+            # Define Mamba model
+            self.mamba = Mamba(d_model=d_model)
+            
+            # Define output heads for classification
+            self.fc = nn.Linear(d_model, 10)
+            # self.backbone = Mamba(d_model=d_model)  # Now Mamba requires d_model to be passed
+            # self.features = self.backbone
         else:
             raise ValueError(f"Unsupported backbone model: {self.backbone_name}")
 
         # ----------------------
         # Output Heads
         # ----------------------
-        self.energy_loss_head = nn.Linear(self.backbone.num_features, 1)  # Sigmoid for binary output
-        self.alpha_head = nn.Linear(self.backbone.num_features, 3)  # Softmax for 3-class output
-        self.q0_head = nn.Linear(self.backbone.num_features, 4)  # Softmax for 4-class output
+        # For EfficientNet/ConvNeXt/SwinV2, the feature dimension is typically `num_features` or `hidden_size`
+        self.energy_loss_head = nn.Linear(self.features.num_features, 1)  # Sigmoid for binary output
+        self.alpha_head = nn.Linear(self.features.num_features, 3)  # Softmax for 3-class output
+        self.q0_head = nn.Linear(self.features.num_features, 4)  # Softmax for 4-class output
+
 
     def forward(self, x):
         # Backbone forward pass
-        x = self.backbone(x)
+        if self.backbone_name == 'mamba':
+            # Process input image through the CNN backbone to extract features
+            features = self.backbone(x)
+            
+            # Pass the extracted features through Mamba (treated as a sequence)
+            mamba_output = self.mamba(features)
+            
+            # Final classification layer
+            x = self.fc(mamba_output)
+        else:
+            x = self.features(x)
 
         # Multi-head outputs
         energy_loss_output = torch.sigmoid(self.energy_loss_head(x))  # Sigmoid activation for binary classification
@@ -59,11 +86,11 @@ class MultiHeadClassifier(nn.Module):
 # ---------------------------
 # Model Creation Helper
 # ---------------------------
-def create_model(backbone='efficientnet', input_shape=(1, 32, 32), learning_rate=0.001):
+def create_model(backbone='efficientnet', input_shape=(1, 32, 32), learning_rate=0.001, d_model=512):
     """
     Helper function to create and compile a MultiHeadClassifier.
     """
-    model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape)
+    model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape, d_model=d_model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -86,26 +113,32 @@ def main():
                         help='Input shape as three integers (default: 1 32 32)')
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='Learning rate (default: 0.001)')
+    parser.add_argument('--d_model', type=int, default=512, help='Model dimension (for Mamba)')  # Add d_model argument
+
     args = parser.parse_args()
 
     print(f"\n[INFO] Testing backbone: {args.backbone}")
     print(f"[INFO] Input shape: {args.input_shape}")
     print(f"[INFO] Learning rate: {args.learning_rate}")
+    print(f"[INFO] d_model: {args.d_model}")
 
     # Create the model with specified parameters
-    model, optimizer = create_model(backbone=args.backbone,
+    model, _ = create_model(backbone=args.backbone,
                                      input_shape=tuple(args.input_shape),
-                                     learning_rate=args.learning_rate)
-    
-    model.eval()  # Set model to evaluation mode
+                                     learning_rate=args.learning_rate,
+                                    d_model=args.d_model)
+    # Display the model summary
+    print("\n[INFO] Model Summary:")
+    print(model)
+    # model.eval()  # Set model to evaluation mode
 
-    # Example random input for testing
-    dummy_input = torch.randn(1, *args.input_shape)  # Example batch with one 32x32 event image
-    outputs = model(dummy_input)
+    # # Example random input for testing
+    # dummy_input = torch.randn(1, *args.input_shape)  # Example batch with one 32x32 event image
+    # outputs = model(dummy_input)
 
-    print(f"\n[INFO] Model summary for {args.backbone}:")
-    for key, value in outputs.items():
-        print(f"{key}: {value.shape}")
+    # print(f"\n[INFO] Model summary for {args.backbone}:")
+    # for key, value in outputs.items():
+    #     print(f"{key}: {value.shape}")
 
 if __name__ == "__main__":
     main()
