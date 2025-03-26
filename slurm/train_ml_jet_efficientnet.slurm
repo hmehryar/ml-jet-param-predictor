@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=ml-jet-train-efficientnet
 #SBATCH --partition=ecscp
-#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
+#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:2
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=10G
-#SBATCH --time=12:00:00
+#SBATCH --mem=64G
+#SBATCH --time=504:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --qos=express
@@ -14,7 +14,7 @@ BATCH_SIZE=512
 EPOCHS=50
 LEARNING_RATE=0.001
 GLOBAL_MAX=121.79151153564453
-ROOT_DIR=~/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000_balanced_unshuffled
+ROOT_DIR=~/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000000_balanced_unshuffled
 OUTPUT_DIR=training_output/
 
 RUN_TAG="${MODEL_TAG}_bs${BATCH_SIZE}_ep${EPOCHS}_lr$(printf %.0e $LEARNING_RATE)"
