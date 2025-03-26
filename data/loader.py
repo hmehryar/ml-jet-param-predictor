@@ -216,16 +216,17 @@ def main():
     parser.add_argument('--random_seed', type=int, default=42, help='Random seed for reproducibility')
     args = parser.parse_args()
 
-    # Calculate global minimum using TensorFlow GPU (if available)
-    print("[INFO] Calculating global minimum using TensorFlow (GPU accelerated)...")
-    global_min = calculate_global_min_with_tf(args.root_dir)
+    # # Calculate global minimum using TensorFlow GPU (if available)
+    # print("[INFO] Calculating global minimum using TensorFlow (GPU accelerated)...")
+    # global_min = calculate_global_min_with_tf(args.root_dir)
     
-    if global_min is None:
-        print("[ERROR] Failed to calculate global minimum.")
-        return
+    # if global_min is None:
+    #     print("[ERROR] Failed to calculate global minimum.")
+    #     return
     
-    print(f"[INFO] Global minimum value in dataset: {global_min}")
-    return
+    # print(f"[INFO] Global minimum value in dataset: {global_min}")
+    # return
+    
     # File names inside dataset root
     train_file = os.path.join(args.root_dir, "train_files.csv")
     val_file = os.path.join(args.root_dir, "val_files.csv")
