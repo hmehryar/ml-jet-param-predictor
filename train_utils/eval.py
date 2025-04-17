@@ -1,7 +1,7 @@
 # evaluate.py
 
 import tensorflow as tf
-from data.loader import load_split_from_csv, build_tf_dataset
+from data.loader_tensor import load_split_from_csv, build_tf_dataset
 from models.model import create_model
 import numpy as np
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix

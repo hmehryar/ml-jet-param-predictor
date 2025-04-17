@@ -1,133 +1,89 @@
 # train.py
 
-import tensorflow as tf
-from data.loader import load_split_from_csv, build_tf_dataset
-from models.model import create_model
-import argparse
 import os
+from config import get_config
+from models.model_factory import create_model
+from data.loader import get_dataloaders
+from train_utils.train_epoch import train_one_epoch
+from train_utils.evaluate import evaluate
+from train_utils.plot_metrics import plot_train_val_metrics
+import torch
+import json
+import pandas as pd
+import datetime
 
-# -------------------------------
-# Mixed Precision (AMP) Enablement
-# -------------------------------
-tf.keras.mixed_precision.set_global_policy('mixed_float16')
-print("[INFO] Mixed Precision (AMP) enabled for GPU optimization.")
-
-# -------------------------------
-# Training Function
-# -------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Training pipeline for ML-JET multi-task classifier")
-    parser.add_argument('--root_dir', type=str, required=True, help='Path to dataset root (containing splits)')
-    parser.add_argument('--global_max', type=float, required=True, help='Global max for normalization')
-    parser.add_argument('--batch_size', type=int, default=512, help='Batch size for training')
-    parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs')
-    parser.add_argument('--buffer_size', type=int, default=10000, help='Shuffle buffer size')
-    parser.add_argument('--output_dir', type=str, default='checkpoints/', help='Directory to save models and logs')
-    parser.add_argument('--model_tag', type=str, required=True, help='Unique model tag (e.g., EfficientNet, Transformer)')
-    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate (optional, if configurable later)')
+    cfg = get_config()
+    os.makedirs(cfg.output_dir, exist_ok=True)
 
-    args = parser.parse_args()
+    # Set seed, device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # -------------------------------
-    # Load Train/Val/Test Splits
-    # -------------------------------
-    print("[INFO] Loading dataset splits...")
-    train_list = load_split_from_csv(os.path.join(args.root_dir, "train_files.csv"), args.root_dir)
-    val_list = load_split_from_csv(os.path.join(args.root_dir, "val_files.csv"), args.root_dir)
-    test_list = load_split_from_csv(os.path.join(args.root_dir, "test_files.csv"), args.root_dir)
+    # Data
+    train_loader, val_loader = get_dataloaders(cfg)
 
-    # -------------------------------
-    # TensorFlow Dataset Pipeline
-    # -------------------------------
-    print("[INFO] Building TensorFlow datasets...")
-    train_dataset = build_tf_dataset(train_list, args.global_max, batch_size=args.batch_size, buffer_size=args.buffer_size, shuffle=True)
-    val_dataset = build_tf_dataset(val_list, args.global_max, batch_size=args.batch_size, buffer_size=args.buffer_size, shuffle=False)
-    test_dataset = build_tf_dataset(test_list, args.global_max, batch_size=args.batch_size, buffer_size=args.buffer_size, shuffle=False)
+    # Model and optimizer
+    model, optimizer = create_model(cfg.backbone, cfg.input_shape, cfg.learning_rate)
+    model.to(device)
 
-    # -------------------------------
-    # Load Model
-    # -------------------------------
-    print("[INFO] Building model...")
-    model = create_model(learning_rate=args.learning_rate)
-    model.build(input_shape=(None, 32, 32, 1))
-    model.summary()
+    criterion = {
+        'energy_loss_output': torch.nn.BCELoss(),
+        'alpha_output': torch.nn.CrossEntropyLoss(),
+        'q0_output': torch.nn.CrossEntropyLoss()
+    }
 
-    # -------------------------------
-    # Callbacks
-    # -------------------------------
-    # Dynamic output directory based on model and params
-    run_tag = f"{args.model_tag}_bs{args.batch_size}_ep{args.epochs}_lr{args.learning_rate:.0e}"
-    output_dir = os.path.join(args.output_dir, run_tag)
-    os.makedirs(output_dir, exist_ok=True)
-    print(f"[INFO] Output directory for this run: {output_dir}")
+    # Resume state
+    start_epoch, best_total_acc, early_stop_counter, best_epoch, best_metrics, all_epoch_metrics = 0, 0.0, 0, 0, {}, []
 
-    callbacks = [
-        tf.keras.callbacks.ModelCheckpoint(
-            filepath=os.path.join(output_dir, 'best_model.h5'),
-            monitor='val_loss',
-            save_best_only=True,
-            save_weights_only=True
-        ),
-        tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss',
-            patience=10,
-            restore_best_weights=True
-        ),
-        tf.keras.callbacks.TensorBoard(
-            log_dir=os.path.join(output_dir, 'logs')
-        )
-    ]
+    # Training trackers
+    train_losses, val_losses = [], []
+    train_acc_total_list, val_acc_total_list = [], []
 
-    # -------------------------------
-    # Training Loop
-    # -------------------------------
-    print("[INFO] Starting training...")
-    model.fit(
-        train_dataset,
-        validation_data=val_dataset,
-        epochs=args.epochs,
-        callbacks=callbacks
-    )
+    for epoch in range(start_epoch, cfg.epochs):
+        train_metrics = train_one_epoch(train_loader, model, criterion, optimizer, device)
+        val_metrics = evaluate(val_loader, model, criterion, device)
 
-    # After training, save summary
-    with open(os.path.join(output_dir, 'training_summary.txt'), 'w') as f:
-        f.write(f"Model Tag: {args.model_tag}\n")
-        f.write(f"Batch Size: {args.batch_size}\n")
-        f.write(f"Epochs: {args.epochs}\n")
-        f.write(f"Learning Rate: {args.learning_rate}\n")
-        f.write(f"Dataset Root: {args.root_dir}\n")
-    # -------------------------------
-    # Evaluation on Test Dataset
-    # -------------------------------
-    print("[INFO] Evaluating on test dataset...")
-    results = model.evaluate(test_dataset)
-    print("[RESULT] Test set performance:", results)
+        # Log
+        train_losses.append(train_metrics["train_loss"])
+        val_losses.append(val_metrics["val_loss"])
+        train_acc_total_list.append(train_metrics["train_acc_total"])
+        val_acc_total_list.append(val_metrics["total_accuracy"])
 
-    print("✅ Training pipeline completed successfully.")
-    # Optionally, print predictions for inspection
-    # for batch_images, batch_labels in test_dataset.take(1):
-    #     preds = model.predict(batch_images)
-    #     print("Sample predictions (Energy Loss, αₛ, Q₀):", preds)
-    #     print("True labels:", batch_labels)
+        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Epoch {epoch+1}/{cfg.epochs} | "
+              f"Train Loss: {train_metrics['train_loss']:.4f} | Val Acc: {val_metrics['total_accuracy']:.4f}")
 
-# -------------------------------
-# Entry Point for Command-Line
-# -------------------------------
+        # Early stopping + best model save
+        if val_metrics["total_accuracy"] > best_total_acc:
+            best_total_acc = val_metrics["total_accuracy"]
+            best_metrics = val_metrics
+            best_epoch = epoch + 1
+            early_stop_counter = 0
+
+            torch.save({
+                'epoch': best_epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'metrics': best_metrics
+            }, os.path.join(cfg.output_dir, "best_model.pth"))
+        else:
+            early_stop_counter += 1
+            if early_stop_counter >= cfg.patience:
+                print(f"Early stopping at epoch {epoch+1}. Best epoch: {best_epoch}")
+                break
+
+        # Save epoch record
+        epoch_record = {"epoch": epoch+1, **train_metrics, **val_metrics}
+        all_epoch_metrics.append(epoch_record)
+
+        with open(os.path.join(cfg.output_dir, "epoch_metrics.json"), "w") as f:
+            json.dump(all_epoch_metrics, f, indent=2)
+
+        pd.DataFrame(all_epoch_metrics).to_csv(os.path.join(cfg.output_dir, "epoch_metrics.csv"), index=False)
+
+    # Plot final metrics
+    plot_train_val_metrics(train_losses, val_losses, train_acc_total_list, val_acc_total_list, cfg.output_dir)
+
+
 if __name__ == "__main__":
     main()
-
-#Test Command
-#python train.py --root_dir ~/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000_balanced_unshuffled --global_max 121.79151153564453 --batch_size 512 --epochs 50 --output_dir training_output/
-
-# python train.py \
-# --root_dir ~/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000_balanced_unshuffled \
-# --global_max 121.79151153564453 \
-# --batch_size 512 \
-# --epochs 50 \
-# --learning_rate 0.001 \
-# --model_tag EfficientNet \
-# --output_dir training_output/
-
-
-
