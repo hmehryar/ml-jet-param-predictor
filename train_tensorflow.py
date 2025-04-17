@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 from data.loader_tensor import load_split_from_csv, build_tf_dataset
-from models.model import create_model
+from models.model_tensorflow import create_model
 import argparse
 import os
 
