@@ -172,10 +172,17 @@ def get_dataloaders(cfg):
     train_ds = JetDataset(train_list, global_max=121.79151153564453)
     val_ds = JetDataset(val_list, global_max=121.79151153564453)
     test_ds = JetDataset(test_list, global_max=121.79151153564453)
+    print(f"[INFO] Training samples: {len(train_ds)}")
+    print(f"[INFO] Validation samples: {len(val_ds)}")
+    print(f"[INFO] Test samples: {len(test_ds)}")
 
     train_loader = DataLoader(train_ds, batch_size=cfg["batch_size"], shuffle=True)
     val_loader = DataLoader(val_ds, batch_size=cfg["batch_size"], shuffle=False)
     test_loader = DataLoader(test_ds, batch_size=cfg["batch_size"], shuffle=False)
+    # Show the length of the dataloaders
+    print(f"[INFO] Length of training dataloader: {len(train_loader)}")
+    print(f"[INFO] Length of validation dataloader: {len(val_loader)}")
+    print(f"[INFO] Length of test dataloader: {len(test_loader)}")
 
     return train_loader, val_loader, test_loader
 
