@@ -53,7 +53,7 @@ def get_config():
     batch_size = 512
     epochs = 50
     learning_rate = 1e-4
-    patience= 5,
+    patience= 5
     global_max = 121.79151153564453
     output_dir = 'training_output/'
     # Build dynamic output directory

@@ -45,7 +45,7 @@ def load_resume_state(output_dir, model, optimizer, device,config):
         print(f"[INFO] Starting fresh training run")
         summary_path = initialize_training_summary(config, summary_path)
         print(f"[INFO] Initial training summary saved at: {summary_path}")
-        
+    return model, optimizer, start_epoch, best_total_acc, early_stop_counter, best_epoch, best_metrics, training_summary
         
         
 def initialize_training_summary(config, summary_path):
