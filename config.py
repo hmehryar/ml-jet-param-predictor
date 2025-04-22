@@ -4,6 +4,11 @@ import platform
 import socket
 import getpass
 import re
+from dataclasses import dataclass
+import os
+
+from types import SimpleNamespace
+
 
 def get_config():
     # --- System/User Info ---
@@ -61,7 +66,7 @@ def get_config():
     
 
     # --- Config Dictionary ---
-    return {
+    return SimpleNamespace(**{
         "model_tag": model_tag,
         "backbone": backbone,
         "batch_size": batch_size,
@@ -75,4 +80,4 @@ def get_config():
         "val_csv": os.path.join(dataset_root_dir, "val_files.csv"),
         "test_csv": os.path.join(dataset_root_dir, "test_files.csv"),
         "output_dir": os.path.join(output_dir, run_tag)
-    }
+    })

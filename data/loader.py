@@ -165,9 +165,9 @@ def load_split_from_csv(filename, root_dir):
     return result
 
 def get_dataloaders(cfg):
-    train_list = load_split_from_csv(cfg["train_csv"], cfg["dataset_root_dir"])
-    val_list = load_split_from_csv(cfg["val_csv"], cfg["dataset_root_dir"])
-    test_list = load_split_from_csv(cfg["test_csv"], cfg["dataset_root_dir"])
+    train_list = load_split_from_csv(cfg.train_csv, cfg.dataset_root_dir)
+    val_list = load_split_from_csv(cfg.val_csv, cfg.dataset_root_dir)
+    test_list = load_split_from_csv(cfg.test_csv, cfg.dataset_root_dir)
 
     train_ds = JetDataset(train_list, global_max=121.79151153564453)
     val_ds = JetDataset(val_list, global_max=121.79151153564453)
@@ -176,9 +176,9 @@ def get_dataloaders(cfg):
     print(f"[INFO] Validation samples: {len(val_ds)}")
     print(f"[INFO] Test samples: {len(test_ds)}")
 
-    train_loader = DataLoader(train_ds, batch_size=cfg["batch_size"], shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=cfg["batch_size"], shuffle=False)
-    test_loader = DataLoader(test_ds, batch_size=cfg["batch_size"], shuffle=False)
+    train_loader = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True)
+    val_loader = DataLoader(val_ds, batch_size=cfg.batch_size, shuffle=False)
+    test_loader = DataLoader(test_ds, batch_size=cfg.batch_size, shuffle=False)
     # Show the length of the dataloaders
     print(f"[INFO] Length of training dataloader: {len(train_loader)}")
     print(f"[INFO] Length of validation dataloader: {len(val_loader)}")
