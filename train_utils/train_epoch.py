@@ -14,30 +14,40 @@ def train_one_epoch(loader, model, criterion, optimizer, device):
     correct_all = 0
     total = 0
 
+    scaler = torch.amp.GradScaler('cuda', enabled=True)
+
     for x, labels in tqdm(loader, desc="Training", leave=False):
         x = x.to(device)
         for key in labels:
             labels[key] = labels[key].to(device)
-         # Forward
-        outputs = model(x)
-        energy_out = outputs['energy_loss_output'].squeeze()
-        alpha_out = outputs['alpha_output']
-        q0_out = outputs['q0_output']
-
-        # Labels
-        gt_energy = labels['energy_loss_output'].squeeze()
-        gt_alpha = labels['alpha_output'].squeeze()
-        gt_q0 = labels['q0_output'].squeeze()
-
-        # Loss
-        loss_energy = criterion['energy_loss_output'](energy_out, gt_energy.float())
-        loss_alpha = criterion['alpha_output'](alpha_out, gt_alpha)
-        loss_q0 = criterion['q0_output'](q0_out, gt_q0)
-        total_batch_loss = loss_energy + loss_alpha + loss_q0
+        
         
         optimizer.zero_grad()
-        total_batch_loss.backward()
-        optimizer.step()
+
+        with torch.amp.autocast('cuda', enabled=True):
+            # Forward
+            outputs = model(x)
+            energy_out = outputs['energy_loss_output'].squeeze()
+            alpha_out = outputs['alpha_output']
+            q0_out = outputs['q0_output']
+
+            # Labels
+            gt_energy = labels['energy_loss_output'].squeeze()
+            gt_alpha = labels['alpha_output'].squeeze()
+            gt_q0 = labels['q0_output'].squeeze()
+
+            # Loss
+            loss_energy = criterion['energy_loss_output'](energy_out, gt_energy.float())
+            loss_alpha = criterion['alpha_output'](alpha_out, gt_alpha)
+            loss_q0 = criterion['q0_output'](q0_out, gt_q0)
+            total_batch_loss = loss_energy + loss_alpha + loss_q0
+
+
+        # total_batch_loss.backward()
+        # optimizer.step()
+        scaler.scale(total_batch_loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         # running_loss += loss.item()
         total_loss += total_batch_loss.item()

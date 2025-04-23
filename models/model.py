@@ -73,14 +73,20 @@ class MultiHeadClassifier(nn.Module):
             x = self.features(x)
 
         # Multi-head outputs
-        energy_loss_output = torch.sigmoid(self.energy_loss_head(x))  # Sigmoid activation for binary classification
-        alpha_output = F.softmax(self.alpha_head(x), dim=1)  # Softmax for αₛ classification
-        q0_output = F.softmax(self.q0_head(x), dim=1)  # Softmax for Q₀ classification
+        # energy_loss_output = torch.sigmoid(self.energy_loss_head(x))  # Sigmoid activation for binary classification
+        # alpha_output = F.softmax(self.alpha_head(x), dim=1)  # Softmax for αₛ classification
+        # q0_output = F.softmax(self.q0_head(x), dim=1)  # Softmax for Q₀ classification
+ 
 
+        # return {
+        #     'energy_loss_output': energy_loss_output,
+        #     'alpha_output': alpha_output,
+        #     'q0_output': q0_output
+        # }
         return {
-            'energy_loss_output': energy_loss_output,
-            'alpha_output': alpha_output,
-            'q0_output': q0_output
+            'energy_loss_output': self.energy_loss_head(x),
+            'alpha_output': self.alpha_head(x),
+            'q0_output': self.q0_head(x)
         }
 
 # ---------------------------

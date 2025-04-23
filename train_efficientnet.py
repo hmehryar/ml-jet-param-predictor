@@ -5,8 +5,6 @@
 
 
 import os
-import json
-import pandas as pd
 import torch
 import torch.nn as nn
 
@@ -35,29 +33,30 @@ cfg=get_config()
 print(cfg)
 
 
-# In[3]:
+# In[ ]:
 
 
 os.makedirs(cfg.output_dir, exist_ok=True)
 print(f"[INFO] Saving all outputs to: {cfg.output_dir}")
 
 
-# In[4]:
+# In[ ]:
 
 
 # Set seed, device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"[INFO] Using device: {device}")
+# torch.backends.cudnn.benchmark = True
 
 
-# In[5]:
+# In[ ]:
 
 
 # Data
 train_loader, val_loader, test_loader = get_dataloaders(cfg)
 
 
-# In[6]:
+# In[ ]:
 
 
 # Model and optimizer
@@ -65,18 +64,19 @@ model, optimizer = create_model(cfg.backbone, cfg.input_shape, cfg.learning_rate
 model.to(device)
 
 
-# In[7]:
+# In[ ]:
 
 
 criterion = {
-    'energy_loss_output': nn.BCELoss(),
+    # 'energy_loss_output': nn.BCELoss(),
+    'energy_loss_output': nn.BCEWithLogitsLoss(),
     'alpha_output': nn.CrossEntropyLoss(),
     'q0_output': nn.CrossEntropyLoss()
 }
 print(f"[INFO] Loss functions:{criterion}")
 
 
-# In[8]:
+# In[ ]:
 
 
 print(f"[INFO] Init Training Trackers")
@@ -88,13 +88,13 @@ val_loss_energy_list, val_loss_alpha_list,val_loss_q0_list,val_loss_list = [], [
 val_acc_energy_list, val_acc_alpha_list,val_acc_q0_list ,val_acc_list = [],[],[],[]
 
 
-# In[9]:
+# In[ ]:
 
 
 model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics = init_resume_state( model, optimizer, device,cfg)
 
 
-# In[10]:
+# In[ ]:
 
 
 for epoch in range(start_epoch, cfg.epochs):
@@ -173,7 +173,7 @@ for epoch in range(start_epoch, cfg.epochs):
     
 
 
-# In[11]:
+# In[ ]:
 
 
 finalize_training_summary(
@@ -190,7 +190,7 @@ print_best_model_summary(
 )
 
 
-# In[12]:
+# In[ ]:
 
 
 plot_train_val_metrics(train_loss_list, val_loss_list, train_acc_list, val_acc_list, cfg.output_dir)
@@ -214,56 +214,4 @@ plot_loss_accuracy(val_loss_list,
                     val_acc_q0_list,
                     cfg.output_dir,
                     title="Validation Loss and Accuracy per Epoch")
-
-
-# In[13]:
-
-
-print("Training Loss Lists:")
-print(f"train_loss_list: {train_loss_list}")
-print(f"train_loss_energy_list: {train_loss_energy_list}")
-print(f"train_loss_alpha_list: {train_loss_alpha_list}")
-print(f"train_loss_q0_list: {train_loss_q0_list}")
-print("Training Accuracy Lists:")
-print(f"train_acc_list: {train_acc_list}")
-print(f"train_acc_energy_list: {train_acc_energy_list}")
-print(f"train_acc_alpha_list: {train_acc_alpha_list}")
-print(f"train_acc_q0_list: {train_acc_q0_list}")
-
-print("Lengths of Training Loss Lists:")
-print(f"Length of train_loss_list: {len(train_loss_list)}")
-print(f"Length of train_loss_energy_list: {len(train_loss_energy_list)}")
-print(f"Length of train_loss_alpha_list: {len(train_loss_alpha_list)}")
-print(f"Length of train_loss_q0_list: {len(train_loss_q0_list)}")
-print("Lengths of Training Accuracy Lists:")
-print(f"Length of train_acc_list: {len(train_acc_list)}")
-print(f"Length of train_acc_energy_list: {len(train_acc_energy_list)}")
-print(f"Length of train_acc_alpha_list: {len(train_acc_alpha_list)}")
-print(f"Length of train_acc_q0_list: {len(train_acc_q0_list)}")
-
-
-# In[14]:
-
-
-print("Validation Loss Lists:")
-print(f"val_loss_list: {val_loss_list}")
-print(f"val_loss_energy_list: {val_loss_energy_list}")
-print(f"val_loss_alpha_list: {val_loss_alpha_list}")
-print(f"val_loss_q0_list: {val_loss_q0_list}")
-print("\nValidation Accuracy Lists:")
-print(f"val_acc_list: {val_acc_list}")
-print(f"val_acc_energy_list: {val_acc_energy_list}")
-print(f"val_acc_alpha_list: {val_acc_alpha_list}")
-print(f"val_acc_q0_list: {val_acc_q0_list}")
-
-print("\nLengths of Validation Loss Lists:")
-print(f"Length of val_loss_list: {len(val_loss_list)}")
-print(f"Length of val_loss_energy_list: {len(val_loss_energy_list)}")
-print(f"Length of val_loss_alpha_list: {len(val_loss_alpha_list)}")
-print(f"Length of val_loss_q0_list: {len(val_loss_q0_list)}")
-print("\nLengths of Validation Accuracy Lists:")
-print(f"Length of val_acc_list: {len(val_acc_list)}")
-print(f"Length of val_acc_energy_list: {len(val_acc_energy_list)}")
-print(f"Length of val_acc_alpha_list: {len(val_acc_alpha_list)}")
-print(f"Length of val_acc_q0_list: {len(val_acc_q0_list)}")
 

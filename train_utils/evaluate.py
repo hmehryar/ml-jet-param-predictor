@@ -23,7 +23,10 @@ def evaluate(loader, model, criterion, device):
             outputs = model(x)
 
             # Energy loss: binary thresholding
-            pred_energy = (outputs['energy_loss_output'] > 0.5).long().squeeze()
+            # pred_energy = (outputs['energy_loss_output'] > 0.5).long().squeeze()
+            energy_logits = outputs['energy_loss_output'].squeeze()
+            pred_energy = (torch.sigmoid(energy_logits) > 0.5).long()
+            
             pred_alpha = torch.argmax(outputs['alpha_output'], dim=1)
             pred_q0 = torch.argmax(outputs['q0_output'], dim=1)
 

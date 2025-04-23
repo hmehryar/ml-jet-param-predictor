@@ -25,7 +25,7 @@ def init_resume_state(model, optimizer, device,config):
         print(f"[INFO] 🔁 Resuming training from checkpoint and summary")
         
         # Load model checkpoint
-        checkpoint = torch.load(resume_path, map_location=device)
+        checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch']

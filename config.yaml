@@ -1,7 +1,0 @@
-batch_size: 512
-learning_rate: 0.0001
-epochs: 50
-buffer_size: 10000
-global_min: 0.0
-global_max: 500.0
-data_root: "~/wsu-grid/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_7200000_balanced_unshuffled/"
