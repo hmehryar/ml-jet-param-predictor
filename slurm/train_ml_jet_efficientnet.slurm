@@ -28,7 +28,8 @@ module purge
 ml python/3.7
 source /wsu/el7/pre-compiled/python/3.7/etc/profile.d/conda.sh
 conda init
-conda activate tensorflow-gpu-v2.8
+# conda activate tensorflow-gpu-v2.8
+conda activate pytorch
 
 START_TIME=$(date +%s)
 jupyter nbconvert --to script train_efficientnet.ipynb
