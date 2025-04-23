@@ -61,13 +61,13 @@ def train_one_epoch(loader, model, criterion, optimizer, device):
         total += x.size(0)
 
     return {
-        'train_loss': total_loss / len(loader),
-        'train_loss_energy': loss_energy_total / len(loader),
-        'train_loss_alpha': loss_alpha_total / len(loader),
-        'train_loss_q0': loss_q0_total / len(loader),
-        'train_acc_energy': correct_energy / total,
-        'train_acc_alpha': correct_alpha / total,
-        'train_acc_q0': correct_q0 / total,
-        'train_acc': correct_all / total
+        'loss': total_loss / len(loader),
+        'loss_energy': loss_energy_total / len(loader),
+        'loss_alpha': loss_alpha_total / len(loader),
+        'loss_q0': loss_q0_total / len(loader),
+        'accuracy': correct_all / total,
+        'accuracy_energy': correct_energy / total,
+        'accuracy_alpha': correct_alpha / total,
+        'accuracy_q0': correct_q0 / total
     }
 

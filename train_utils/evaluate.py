@@ -70,26 +70,26 @@ def evaluate(loader, model, criterion, device):
     
     # All metrics + losses in one dict
     metrics = {
-        "val_accuracy": acc_total,
-        "val_loss": avg_val_loss,
-        "val_loss_energy": avg_loss_energy,
-        "val_loss_alpha": avg_loss_alpha,
-        "val_loss_q0": avg_loss_q0,
+        "loss": avg_val_loss,
+        "loss_energy": avg_loss_energy,
+        "loss_alpha": avg_loss_alpha,
+        "loss_q0": avg_loss_q0,
+        "accuracy": acc_total,
         "energy": {
             "accuracy": accuracy_score(y_true['energy'], y_pred['energy']),
-            "precision": precision_score(y_true['energy'], y_pred['energy'], average='macro'),
+            "precision": precision_score(y_true['energy'], y_pred['energy'], average='macro',zero_division=0),
             "recall": recall_score(y_true['energy'], y_pred['energy'], average='macro'),
             "f1": f1_score(y_true['energy'], y_pred['energy'], average='macro'),
         },
         "alpha": {
             "accuracy": accuracy_score(y_true['alpha'], y_pred['alpha']),
-            "precision": precision_score(y_true['alpha'], y_pred['alpha'], average='macro'),
+            "precision": precision_score(y_true['alpha'], y_pred['alpha'], average='macro',zero_division=0),
             "recall": recall_score(y_true['alpha'], y_pred['alpha'], average='macro'),
             "f1": f1_score(y_true['alpha'], y_pred['alpha'], average='macro'),
         },
         "q0": {
             "accuracy": accuracy_score(y_true['q0'], y_pred['q0']),
-            "precision": precision_score(y_true['q0'], y_pred['q0'], average='macro'),
+            "precision": precision_score(y_true['q0'], y_pred['q0'], average='macro',zero_division=0),
             "recall": recall_score(y_true['q0'], y_pred['q0'], average='macro'),
             "f1": f1_score(y_true['q0'], y_pred['q0'], average='macro'),
         }

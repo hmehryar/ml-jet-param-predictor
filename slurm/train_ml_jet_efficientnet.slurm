@@ -31,8 +31,8 @@ conda init
 conda activate tensorflow-gpu-v2.8
 
 START_TIME=$(date +%s)
-jupyter nbconvert --to script train_efficientnet_mljet.ipynb
-python train_efficientnet_mljet.py --root_dir $ROOT_DIR --global_max $GLOBAL_MAX --batch_size $BATCH_SIZE --epochs $EPOCHS --learning_rate $LEARNING_RATE --model_tag $MODEL_TAG --output_dir $OUTPUT_DIR
+jupyter nbconvert --to script train_efficientnet.ipynb
+python train_efficientnet.py --root_dir $ROOT_DIR --global_max $GLOBAL_MAX --batch_size $BATCH_SIZE --epochs $EPOCHS --learning_rate $LEARNING_RATE --model_tag $MODEL_TAG --output_dir $OUTPUT_DIR
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
