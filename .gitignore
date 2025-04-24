@@ -17,6 +17,7 @@ checkpoints/
 logs/
 wandb/
 training_output/
+/train/train_archive/
 
 # VS Code settings
 .vscode/

@@ -165,6 +165,7 @@ def load_split_from_csv(filename, root_dir):
     return result
 
 def get_dataloaders(cfg):
+    '''Create DataLoader objects for training, validation, and testing datasets.'''
     train_list = load_split_from_csv(cfg.train_csv, cfg.dataset_root_dir)
     val_list = load_split_from_csv(cfg.val_csv, cfg.dataset_root_dir)
     test_list = load_split_from_csv(cfg.test_csv, cfg.dataset_root_dir)
