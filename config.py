@@ -8,13 +8,18 @@ import argparse
 import yaml
 from types import SimpleNamespace
 
-def get_config():
-   # --- Parse command-line args ---
-    parser = argparse.ArgumentParser(description="ML-JET Model Config")
-    parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
-    args = parser.parse_args()
+def get_config(config_path=None):
+    # --- Parse command-line args only if not running in notebook ---
+    if config_path is None:
+        try:
+        # --- Parse command-line args ---
+            parser = argparse.ArgumentParser(description="ML-JET Model Config")
+            parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
+            args = parser.parse_args()
+            config_path = args.config
+        except SystemExit:
+            raise ValueError("Must provide config_path explicitly when running in notebook mode.")
 
-    config_path = args.config
     print(f"[INFO] Config Path: {config_path}")
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Config file not found: {config_path}")

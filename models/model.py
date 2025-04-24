@@ -25,10 +25,13 @@ class MultiHeadClassifier(nn.Module):
             self.backbone.conv_stem = nn.Conv2d(1, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
             self.features = self.backbone
         elif self.backbone_name == 'convnext':
+            print(f"[INFO] Using ConvNeXt backbone with input shape: {input_shape}")
             # ConvNeXt: Modify input layer to accept 1 channel instead of 3
-            self.backbone = timm.create_model('convnext_base', pretrained=False, num_classes=0)
-            self.backbone.stem[0] = nn.Conv2d(1, 96, kernel_size=(4, 4), stride=(4, 4), padding=(1, 1), bias=False)  # Adjust the first conv layer
-            self.backbone.norm = nn.LayerNorm(96)  # Adjust normalization layer (optional, depending on the model)
+            self.backbone = timm.create_model('convnext_small.in12k_ft_in1k', pretrained=False, in_chans=1, num_classes=0)
+            # self.backbone.stem[0] = nn.Conv2d(1, 96, kernel_size=(4, 4), stride=(4, 4), padding=(1, 1), bias=False)  # Adjust the first conv layer
+            # self.backbone.norm = nn.LayerNorm(96)  # Adjust normalization layer (optional, depending on the model)
+            self.backbone.conv_stem = nn.Conv2d(1, 32, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+            print(f"[INFO] ConvNeXt backbone initialized with input shape: {input_shape}")
             self.features = self.backbone
         elif self.backbone_name == 'swin':
             # SwinV2: Use the pre-trained model, no need to extract backbone separately
