@@ -65,8 +65,15 @@ def get_config(config_path=None):
     patience = cfg_dict.get("patience", 5)
     global_max = cfg_dict.get("global_max", 121.79151153564453)
     output_base = cfg_dict.get("output_dir", "training_output/")
+    group_size    = cfg_dict.get("group_size", 1)
 
-    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}"
+    # --- Split CSV Paths based on group_size ---
+    basename     = f"file_labels_aggregated_g{group_size}"
+    train_csv    = os.path.join(dataset_root_dir, f"{basename}_train.csv")
+    val_csv      = os.path.join(dataset_root_dir, f"{basename}_val.csv")
+    test_csv     = os.path.join(dataset_root_dir, f"{basename}_test.csv")
+
+    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}"
     output_dir = os.path.join(output_base, run_tag)
 
     return SimpleNamespace(**{
@@ -79,10 +86,11 @@ def get_config(config_path=None):
         "input_shape": input_shape,
         "global_max": global_max,
         "dataset_root_dir": dataset_root_dir,
-        "train_csv": os.path.join(dataset_root_dir, "train_files.csv"),
-        "val_csv": os.path.join(dataset_root_dir, "val_files.csv"),
-        "test_csv": os.path.join(dataset_root_dir, "test_files.csv"),
-        "output_dir": output_dir
+        "train_csv": train_csv,
+        "val_csv": val_csv,
+        "test_csv": test_csv,
+        "output_dir": output_dir,
+        "group_size": group_size,
     })
 
 if __name__ == "__main__":

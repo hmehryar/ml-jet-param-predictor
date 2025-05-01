@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 from collections import defaultdict
 from torch.utils.data import DataLoader
-
+import pandas as pd
 
 # -------------------------------
 # 1. Directory to Label Mapping
@@ -139,7 +139,31 @@ class JetDataset(Dataset):
 
         return torch.tensor(event), labels
 
+class AggregatedJetDataset(Dataset):
+    def __init__(self, agg_csv, root_dir, global_max, device='cuda'):
+        self.df = pd.read_csv(agg_csv)
+        self.root_dir = root_dir
+        self.global_max = global_max
+        self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
 
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+        file_list = row['file_paths'].split('|')
+        imgs = []
+        for rel_path in file_list:
+            abs_path = os.path.join(self.root_dir, rel_path)
+            arr = np.load(abs_path).astype(np.float32) / self.global_max
+            imgs.append(torch.tensor(arr, device=self.device).unsqueeze(0))
+        img_avg = torch.stack(imgs).mean(dim=0)
+        labels = {
+            'energy_loss_output': torch.tensor([row['energy_loss']], dtype=torch.long, device=self.device),
+            'alpha_output':       torch.tensor([row['alpha']],       dtype=torch.long, device=self.device),
+            'q0_output':          torch.tensor([row['q0']],          dtype=torch.long, device=self.device)
+        }
+        return img_avg, labels
 # -------------------------------
 # Split Saving/Loading Utilities
 # -------------------------------
@@ -165,14 +189,27 @@ def load_split_from_csv(filename, root_dir):
     return result
 
 def get_dataloaders(cfg):
-    '''Create DataLoader objects for training, validation, and testing datasets.'''
-    train_list = load_split_from_csv(cfg.train_csv, cfg.dataset_root_dir)
-    val_list = load_split_from_csv(cfg.val_csv, cfg.dataset_root_dir)
-    test_list = load_split_from_csv(cfg.test_csv, cfg.dataset_root_dir)
+    
+    """
+    Create DataLoader objects for training, validation, and testing datasets.
+    If cfg.group_size > 1, uses AggregatedJetDataset; otherwise uses JetDataset.
+    """
+    # Choose dataset class based on whether we're aggregating
+    if cfg.group_size> 1:
+        # Aggregated splits are CSVs with columns: agg_id, file_paths, energy_loss, alpha, q0
+        train_ds = AggregatedJetDataset(cfg.train_csv, cfg.dataset_root_dir,cfg.global_max)
+        val_ds   = AggregatedJetDataset(cfg.val_csv, cfg.dataset_root_dir,cfg.global_max)
+        test_ds  = AggregatedJetDataset(cfg.test_csv, cfg.dataset_root_dir,cfg.global_max)
 
-    train_ds = JetDataset(train_list, global_max=121.79151153564453)
-    val_ds = JetDataset(val_list, global_max=121.79151153564453)
-    test_ds = JetDataset(test_list, global_max=121.79151153564453)
+    else:
+        '''Create DataLoader objects for training, validation, and testing datasets.'''
+        train_list = load_split_from_csv(cfg.train_csv, cfg.dataset_root_dir)
+        val_list = load_split_from_csv(cfg.val_csv, cfg.dataset_root_dir)
+        test_list = load_split_from_csv(cfg.test_csv, cfg.dataset_root_dir)
+
+        train_ds = JetDataset(train_list, global_max=cfg.global_max)
+        val_ds = JetDataset(val_list, global_max=cfg.global_max)
+        test_ds = JetDataset(test_list, global_max=cfg.global_max)
     print(f"[INFO] Training samples: {len(train_ds)}")
     print(f"[INFO] Validation samples: {len(val_ds)}")
     print(f"[INFO] Test samples: {len(test_ds)}")
