@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=ml-jet-train-efficientnet
+#SBATCH --job-name=ml-jet-convnext-b512-g500
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
@@ -8,7 +8,6 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --qos=express
-
 
 CONFIG_PATH="$1"
 # CONFIG_PATH="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml"
@@ -43,7 +42,6 @@ conda activate pytorch
 
 START_TIME=$(date +%s)
 jupyter nbconvert --to script train.ipynb --output train_${MODEL_TAG}_${SLURM_JOB_ID}
-# python train_efficientnet.py --root_dir $ROOT_DIR --global_max $GLOBAL_MAX --batch_size $BATCH_SIZE --epochs $EPOCHS --learning_rate $LEARNING_RATE --model_tag $MODEL_TAG --output_dir $OUTPUT_DIR
 python train_${MODEL_TAG}_${SLURM_JOB_ID}.py --config "$CONFIG_PATH"
 
 END_TIME=$(date +%s)
