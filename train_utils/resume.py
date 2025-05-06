@@ -7,7 +7,7 @@ from train_utils.training_summary import init_training_summary
 
 def init_resume_state(model, optimizer, device,config):
     print(f"[INFO] Init Resume/Training Parameters")
-    early_stop_counter,start_epoch,best_acc,best_epoch,best_metrics,all_epoch_metrics= 0, 0, 0.0, 0, {}, []
+    early_stop_counter,start_epoch,best_acc,best_epoch,best_metrics,all_epoch_metrics,summary_status= 0, 0, 0.0, 0, {}, [],""
 
     summary_path = os.path.join(config.output_dir, "training_summary.json")
     resume_path = os.path.join(config.output_dir, "best_model.pth")
@@ -38,6 +38,7 @@ def init_resume_state(model, optimizer, device,config):
             training_summary = json.load(f)
             early_stop_counter = training_summary.get("early_stop_counter", 0)
             metric_file_path= training_summary.get("metrics_file", "")
+            summary_status=training_summary.get("summary_status","")# "interrupted_or_incomplete",
             with open(metric_file_path, "r") as m:
                 all_epoch_metrics = json.load(m)
 
@@ -45,5 +46,5 @@ def init_resume_state(model, optimizer, device,config):
     else:
         print(f"[INFO] Starting fresh training run by initializing training summary")
         training_summary=init_training_summary(config)
-    return model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics
+    return model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics, summary_status
         

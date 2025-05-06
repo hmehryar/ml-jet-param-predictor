@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import timm
 from transformers import SwinForImageClassification
-from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
+# from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
 import torch.nn.functional as F
 import argparse
 
@@ -34,16 +34,38 @@ class MultiHeadClassifier(nn.Module):
             print(f"[INFO] ConvNeXt backbone initialized with input shape: {input_shape}")
             self.features = self.backbone
         elif self.backbone_name == 'swin':
-            # SwinV2: Use the pre-trained model, no need to extract backbone separately
-            self.backbone = SwinForImageClassification.from_pretrained("microsoft/swin-base-patch4-window7-224")
-            self.features = self.backbone.config  # No need to extract 'backbone' because it includes everything
-            self.features.num_features = self.backbone.config.hidden_size  # No need to extract 'backbone' because it includes everything
+            from timm.models.swin_transformer import SwinTransformer
+            # 1) Build a Swin that takes 1×32×32 inputs directly:
+            #    - patch_size divides 32, e.g. 4 → produces (32/4=8) patches per dim
+            #    - window_size also divides 8, e.g. 4 → non‐overlapping windows
+            self.backbone = SwinTransformer(
+                img_size=32,
+                patch_size=4,
+                in_chans=1,
+                embed_dim=96,
+                depths=[2, 2, 6, 2],
+                num_heads=[3, 6, 12, 24],
+                window_size=4,
+                mlp_ratio=4.,
+                qkv_bias=True,
+                drop_rate=0.,
+                attn_drop_rate=0.,
+                drop_path_rate=0.1,
+                norm_layer=nn.LayerNorm,
+                patch_norm=True,
+                use_checkpoint=False,
+                num_classes=0  # <— so it returns features, not 1000‐class logits
+            )
+            self.features=self.backbone
+            # 2) The final feature dim is embed_dim * 2^(len(depths)-1)
+            #    Since swin builds hierarchies, use its num_features attr:
+            self.features.num_features = self.backbone.num_features
         elif self.backbone_name == 'mamba':
              # Mamba: Pass d_model to Mamba initialization
              # Use a CNN backbone to process images and convert them into sequences
             self.backbone = timm.create_model('efficientnet_b0', pretrained=True, num_classes=0)  # Feature extractor (no classification head)
             # Define Mamba model
-            self.mamba = Mamba(d_model=d_model)
+            # self.mamba = Mamba(d_model=d_model)
             
             # Define output heads for classification
             self.fc = nn.Linear(d_model, 10)

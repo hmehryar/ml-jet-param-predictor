@@ -29,12 +29,13 @@ from train_utils.plot_metrics import plot_loss_accuracy
 # In[ ]:
 
 
-# cfg=get_config(config_path="config/convnext_bs512_ep50_lr1e-04_ds1000_g5.yml")
+# cfg=get_config(config_path="config/swin_bs512_ep50_lr1e-04_ds1000.yml")
+# cfg=get_config(config_path="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml")
 cfg=get_config()
 print(cfg)
 
 
-# In[3]:
+# In[4]:
 
 
 os.makedirs(cfg.output_dir, exist_ok=True)
@@ -89,20 +90,76 @@ val_loss_energy_list, val_loss_alpha_list,val_loss_q0_list,val_loss_list = [], [
 val_acc_energy_list, val_acc_alpha_list,val_acc_q0_list ,val_acc_list = [],[],[],[]
 
 
-# In[9]:
+# In[ ]:
 
 
-model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics = init_resume_state( model, optimizer, device,cfg)
+model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics,summary_status = init_resume_state( model, optimizer, device,cfg)
 
 
 # In[ ]:
 
 
+def fill_trackers_from_history(all_epoch_metrics,
+                               train_loss_energy_list, train_loss_alpha_list,
+                               train_loss_q0_list, train_loss_list,
+                               train_acc_energy_list, train_acc_alpha_list,
+                               train_acc_q0_list, train_acc_list,
+                               val_loss_energy_list, val_loss_alpha_list,
+                               val_loss_q0_list, val_loss_list,
+                               val_acc_energy_list, val_acc_alpha_list,
+                               val_acc_q0_list, val_acc_list,
+                               summary_status):
+    """
+    If summary_status indicates an interrupted/incomplete run,
+    extract metrics from all_epoch_metrics and append into the provided lists.
+    """
+    if summary_status != "interrupted_or_incomplete":
+        return
+
+    for record in all_epoch_metrics:
+        # training
+        train_loss_energy_list.append(record["train_loss_energy"])
+        train_loss_alpha_list.append(record["train_loss_alpha"])
+        train_loss_q0_list.append(record["train_loss_q0"])
+        train_loss_list.append(record["train_loss"])
+        train_acc_energy_list.append(record["train_acc_energy"])
+        train_acc_alpha_list.append(record["train_acc_alpha"])
+        train_acc_q0_list.append(record["train_acc_q0"])
+        train_acc_list.append(record["train_acc"])
+
+        # validation
+        val_loss_energy_list.append(record["val_loss_energy"])
+        val_loss_alpha_list.append(record["val_loss_alpha"])
+        val_loss_q0_list.append(record["val_loss_q0"])
+        val_loss_list.append(record["val_loss"])
+        val_acc_energy_list.append(record["val_energy"]["accuracy"])
+        val_acc_alpha_list.append(record["val_alpha"]["accuracy"])
+        val_acc_q0_list.append(record["val_q0"]["accuracy"])
+        val_acc_list.append(record["val_acc"])
+
+
+# In[ ]:
+
+
+# fill_trackers_from_history(
+#     all_epoch_metrics,
+#     train_loss_energy_list, train_loss_alpha_list, train_loss_q0_list, train_loss_list,
+#     train_acc_energy_list, train_acc_alpha_list, train_acc_q0_list, train_acc_list,
+#     val_loss_energy_list, val_loss_alpha_list, val_loss_q0_list, val_loss_list,
+#     val_acc_energy_list, val_acc_alpha_list, val_acc_q0_list, val_acc_list,
+#     summary_status
+# )
+
+
+# In[ ]:
+
+
+# for testing
 # train_metrics = train_one_epoch(train_loader, model, criterion, optimizer, device)
 # print(f"[INFO] Training metrics: {train_metrics}")
 
 
-# In[11]:
+# In[10]:
 
 
 for epoch in range(start_epoch, cfg.epochs):

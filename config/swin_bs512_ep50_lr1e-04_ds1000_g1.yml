@@ -1,0 +1,11 @@
+model_tag: Swin
+backbone: swin
+batch_size: 512
+epochs: 50
+learning_rate: 0.0001
+patience: 5
+input_shape: [1, 32, 32]
+global_max: 121.79151153564453
+output_dir: training_output/
+dataset_subdir: jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000_balanced_unshuffled
+group_size: 1

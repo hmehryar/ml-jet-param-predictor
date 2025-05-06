@@ -34,7 +34,7 @@ def get_config(config_path=None):
     user = getpass.getuser().lower()
 
     # --- Dataset Path Based on System ---
-    if system == "Linux" and "wsl" in release and "arsi" in user:
+    if system == "Linux" and "hm-srv1" in hostname and "arsalan" in user and "wsl" in release :
         base_path = "/mnt/d/Projects/110_JetscapeML/hm_jetscapeml_source/data"
         print("[INFO] Detected WSL environment")
     elif system == "Linux" and "ds044955" in hostname and "arsalan" in user:
