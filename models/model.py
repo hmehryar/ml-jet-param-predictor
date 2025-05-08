@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 import timm
 from transformers import SwinForImageClassification
+from timm.models.swin_transformer import SwinTransformer
+from timm.models.vision_transformer import VisionTransformer
+
 # from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
 import torch.nn.functional as F
 import argparse
@@ -34,7 +37,7 @@ class MultiHeadClassifier(nn.Module):
             print(f"[INFO] ConvNeXt backbone initialized with input shape: {input_shape}")
             self.features = self.backbone
         elif self.backbone_name == 'swin':
-            from timm.models.swin_transformer import SwinTransformer
+            
             # 1) Build a Swin that takes 1×32×32 inputs directly:
             #    - patch_size divides 32, e.g. 4 → produces (32/4=8) patches per dim
             #    - window_size also divides 8, e.g. 4 → non‐overlapping windows
@@ -60,6 +63,35 @@ class MultiHeadClassifier(nn.Module):
             # 2) The final feature dim is embed_dim * 2^(len(depths)-1)
             #    Since swin builds hierarchies, use its num_features attr:
             self.features.num_features = self.backbone.num_features
+        elif self.backbone_name == 'vit':
+            # ViT: Modify input layer to accept 1 channel instead of 3
+            self.backbone = timm.create_model('vit_base_patch16_224', pretrained=False, in_chans=1, num_classes=0)
+            self.backbone.patch_embed.proj = nn.Conv2d(1, 768, kernel_size=(16, 16), stride=(16, 16), bias=False)
+            self.features = self.backbone
+
+            # 1) Build a ViT that takes 1×32×32 inputs directly:
+            #    - img_size=32, patch_size=4 → (32/4=8)^2 = 64 patches
+            #    - embed_dim small for speed, e.g. 192
+            #    - depth=4 layers, num_heads=3 (must divide 192)
+            self.backbone = VisionTransformer(
+                img_size=32,
+                patch_size=4,
+                in_chans=1,
+                embed_dim=192,
+                depth=4,
+                num_heads=3,
+                mlp_ratio=4.0,
+                qkv_bias=True,
+                drop_rate=0.0,
+                attn_drop_rate=0.0,
+                drop_path_rate=0.1,
+                norm_layer=nn.LayerNorm,
+                num_classes=0,        # returns features
+            )
+
+            self.features=self.backbone
+            # 2) Feature dimension from ViT’s output:
+            self.features.num_features = self.backbone.embed_dim  # 192
         elif self.backbone_name == 'mamba':
              # Mamba: Pass d_model to Mamba initialization
              # Use a CNN backbone to process images and convert them into sequences

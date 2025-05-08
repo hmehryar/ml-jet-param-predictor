@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=ml-jet-convnext-b32-g500
+#SBATCH --job-name=ml-jet-vit-b32-g500
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
@@ -8,6 +8,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --qos=express
+
+nvidia-smi
 
 CONFIG_PATH="$1"
 # CONFIG_PATH="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml"
