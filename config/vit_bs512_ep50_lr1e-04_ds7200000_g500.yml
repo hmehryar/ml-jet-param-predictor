@@ -1,6 +1,6 @@
-model_tag: ViT_g500_r2
+model_tag: ViT_g500
 backbone: vit
-batch_size: 32
+batch_size: 512
 epochs: 50
 learning_rate: 0.0001
 patience: 50

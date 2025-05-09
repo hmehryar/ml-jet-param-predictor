@@ -30,20 +30,20 @@ from train_utils.plot_metrics import plot_loss_accuracy
 # In[ ]:
 
 
-# cfg=get_config(config_path="config/swin_bs512_ep50_lr1e-04_ds1000.yml")
+# cfg=get_config(config_path="config/vit_bs512_ep50_lr1e-04_ds1000.yml")
 # cfg=get_config(config_path="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml")
 cfg=get_config()
 print(cfg)
 
 
-# In[3]:
+# In[4]:
 
 
 os.makedirs(cfg.output_dir, exist_ok=True)
 print(f"[INFO] Saving all outputs to: {cfg.output_dir}")
 
 
-# In[4]:
+# In[5]:
 
 
 # Set seed, device
@@ -52,14 +52,14 @@ print(f"[INFO] Using device: {device}")
 # torch.backends.cudnn.benchmark = True
 
 
-# In[5]:
+# In[6]:
 
 
 # Data
 train_loader, val_loader, test_loader = get_dataloaders(cfg)
 
 
-# In[6]:
+# In[7]:
 
 
 # Model and optimizer
@@ -67,7 +67,7 @@ model, optimizer = create_model(cfg.backbone, cfg.input_shape, cfg.learning_rate
 model.to(device)
 
 
-# In[7]:
+# In[8]:
 
 
 criterion = {
@@ -79,7 +79,7 @@ criterion = {
 print(f"[INFO] Loss functions:{criterion}")
 
 
-# In[8]:
+# In[9]:
 
 
 print(f"[INFO] Init Training Trackers")
@@ -91,13 +91,13 @@ val_loss_energy_list, val_loss_alpha_list,val_loss_q0_list,val_loss_list = [], [
 val_acc_energy_list, val_acc_alpha_list,val_acc_q0_list ,val_acc_list = [],[],[],[]
 
 
-# In[9]:
+# In[10]:
 
 
 model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics,summary_status = init_resume_state( model, optimizer, device,cfg)
 
 
-# In[13]:
+# In[11]:
 
 
 fill_trackers_from_history(
@@ -118,7 +118,7 @@ fill_trackers_from_history(
 # print(f"[INFO] Training metrics: {train_metrics}")
 
 
-# In[16]:
+# In[12]:
 
 
 for epoch in range(start_epoch, cfg.epochs):
@@ -197,7 +197,7 @@ for epoch in range(start_epoch, cfg.epochs):
     
 
 
-# In[17]:
+# In[13]:
 
 
 finalize_training_summary(
@@ -214,7 +214,7 @@ print_best_model_summary(
 )
 
 
-# In[18]:
+# In[14]:
 
 
 plot_train_val_metrics(train_loss_list, val_loss_list, train_acc_list, val_acc_list, cfg.output_dir)

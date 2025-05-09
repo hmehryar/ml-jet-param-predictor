@@ -1,9 +1,9 @@
-model_tag: ViT_g500_r2
-backbone: vit
-batch_size: 32
+model_tag: Swin_g500
+backbone: swin
+batch_size: 512
 epochs: 50
 learning_rate: 0.0001
-patience: 50
+patience: 20
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453
 output_dir: training_output/

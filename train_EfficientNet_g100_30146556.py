@@ -27,12 +27,12 @@ from train_utils.plot_metrics import plot_train_val_metrics
 from train_utils.plot_metrics import plot_loss_accuracy
 
 
-# In[3]:
+# In[ ]:
 
 
-cfg=get_config(config_path="config/vit_bs512_ep50_lr1e-04_ds1000.yml")
+# cfg=get_config(config_path="config/vit_bs512_ep50_lr1e-04_ds1000.yml")
 # cfg=get_config(config_path="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml")
-# cfg=get_config()
+cfg=get_config()
 print(cfg)
 
 

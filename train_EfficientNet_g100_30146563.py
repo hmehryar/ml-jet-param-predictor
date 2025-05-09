@@ -13,6 +13,7 @@ from config import get_config
 from data.loader import get_dataloaders
 from models.model import create_model
 from train_utils.resume import init_resume_state
+from train_utils.resume import fill_trackers_from_history
 from train_utils.train_epoch import train_one_epoch
 from train_utils.evaluate import evaluate
 from train_utils.train_metrics_logger import update_train_logs
@@ -29,19 +30,20 @@ from train_utils.plot_metrics import plot_loss_accuracy
 # In[ ]:
 
 
-# cfg=get_config(config_path="config/convnext_bs512_ep50_lr1e-04_ds1000_g5.yml")
+# cfg=get_config(config_path="config/vit_bs512_ep50_lr1e-04_ds1000.yml")
+# cfg=get_config(config_path="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml")
 cfg=get_config()
 print(cfg)
 
 
-# In[3]:
+# In[4]:
 
 
 os.makedirs(cfg.output_dir, exist_ok=True)
 print(f"[INFO] Saving all outputs to: {cfg.output_dir}")
 
 
-# In[4]:
+# In[5]:
 
 
 # Set seed, device
@@ -50,14 +52,14 @@ print(f"[INFO] Using device: {device}")
 # torch.backends.cudnn.benchmark = True
 
 
-# In[5]:
+# In[6]:
 
 
 # Data
 train_loader, val_loader, test_loader = get_dataloaders(cfg)
 
 
-# In[6]:
+# In[7]:
 
 
 # Model and optimizer
@@ -65,7 +67,7 @@ model, optimizer = create_model(cfg.backbone, cfg.input_shape, cfg.learning_rate
 model.to(device)
 
 
-# In[7]:
+# In[8]:
 
 
 criterion = {
@@ -77,7 +79,7 @@ criterion = {
 print(f"[INFO] Loss functions:{criterion}")
 
 
-# In[8]:
+# In[9]:
 
 
 print(f"[INFO] Init Training Trackers")
@@ -89,20 +91,34 @@ val_loss_energy_list, val_loss_alpha_list,val_loss_q0_list,val_loss_list = [], [
 val_acc_energy_list, val_acc_alpha_list,val_acc_q0_list ,val_acc_list = [],[],[],[]
 
 
-# In[9]:
+# In[10]:
 
 
-model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics = init_resume_state( model, optimizer, device,cfg)
+model, optimizer, start_epoch, best_acc, early_stop_counter, best_epoch, best_metrics, training_summary, all_epoch_metrics,summary_status = init_resume_state( model, optimizer, device,cfg)
 
 
-# In[ ]:
+# In[11]:
 
 
+fill_trackers_from_history(
+    all_epoch_metrics,
+    train_loss_energy_list, train_loss_alpha_list, train_loss_q0_list, train_loss_list,
+    train_acc_energy_list, train_acc_alpha_list, train_acc_q0_list, train_acc_list,
+    val_loss_energy_list, val_loss_alpha_list, val_loss_q0_list, val_loss_list,
+    val_acc_energy_list, val_acc_alpha_list, val_acc_q0_list, val_acc_list,
+    summary_status, best_epoch
+)
+
+
+# In[15]:
+
+
+# for testing
 # train_metrics = train_one_epoch(train_loader, model, criterion, optimizer, device)
 # print(f"[INFO] Training metrics: {train_metrics}")
 
 
-# In[11]:
+# In[12]:
 
 
 for epoch in range(start_epoch, cfg.epochs):
@@ -181,7 +197,7 @@ for epoch in range(start_epoch, cfg.epochs):
     
 
 
-# In[ ]:
+# In[13]:
 
 
 finalize_training_summary(
@@ -198,7 +214,7 @@ print_best_model_summary(
 )
 
 
-# In[ ]:
+# In[14]:
 
 
 plot_train_val_metrics(train_loss_list, val_loss_list, train_acc_list, val_acc_list, cfg.output_dir)

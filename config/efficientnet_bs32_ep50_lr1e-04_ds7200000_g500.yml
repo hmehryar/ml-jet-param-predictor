@@ -1,9 +1,9 @@
-model_tag: ViT_g500_r2
-backbone: vit
+model_tag: EfficientNet_g500
+backbone: efficientnet
 batch_size: 32
 epochs: 50
 learning_rate: 0.0001
-patience: 50
+patience: 20
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453
 output_dir: training_output/

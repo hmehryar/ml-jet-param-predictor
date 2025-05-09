@@ -1,17 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name=ml-jet-convnext-b32-g500
+#SBATCH --job-name=ml-jet-convnext-b512-g100
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=32G
+#SBATCH --mem=8G
 #SBATCH --time=504:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --qos=express
 
 CONFIG_PATH="$1"
-# CONFIG_PATH="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml"
-# CONFIG_PATH="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml"
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "❌ Config file not found: $CONFIG_PATH"
   exit 1
@@ -37,7 +35,6 @@ module purge
 ml python/3.7
 source /wsu/el7/pre-compiled/python/3.7/etc/profile.d/conda.sh
 conda init
-# conda activate tensorflow-gpu-v2.8
 conda activate pytorch
 
 START_TIME=$(date +%s)
