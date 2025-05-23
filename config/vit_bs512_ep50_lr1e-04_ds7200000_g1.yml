@@ -1,5 +1,5 @@
-model_tag: ConvNeXt_g1
-backbone: convnext
+model_tag: ViT_g1
+backbone: vit
 batch_size: 512
 epochs: 50
 learning_rate: 0.0001

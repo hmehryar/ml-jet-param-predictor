@@ -1,5 +1,5 @@
-model_tag: ConvNeXt_g1
-backbone: convnext
+model_tag: MambaVision_g1
+backbone: mamba_vision
 batch_size: 512
 epochs: 50
 learning_rate: 0.0001

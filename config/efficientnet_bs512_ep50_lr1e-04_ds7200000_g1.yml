@@ -1,5 +1,5 @@
-model_tag: ConvNeXt_g1
-backbone: convnext
+model_tag: EfficientNet_g1
+backbone: efficientnet
 batch_size: 512
 epochs: 50
 learning_rate: 0.0001
