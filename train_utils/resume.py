@@ -10,12 +10,8 @@ def init_resume_state(model, optimizer, device,config):
     early_stop_counter,start_epoch,best_acc,best_epoch,best_metrics,all_epoch_metrics,summary_status= 0, 0, 0.0, 0, {}, [],""
 
     summary_path = os.path.join(config.output_dir, "training_summary.json")
-    resume_path = os.path.join(config.output_dir, "best_model.pth")
-
-    # best_epoch = 0
-    # start_epoch = 0
-    # best_acc = 0.0
-    # early_stop_counter = 0
+    best_path = os.path.join(config.output_dir, "best_model.pth")
+    resume_path = os.path.join(config.output_dir, "last_model.pth")
 
     best_metrics = {}
     training_summary= {}
@@ -26,12 +22,17 @@ def init_resume_state(model, optimizer, device,config):
         
         # Load model checkpoint
         checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
+        # Load the last (most recent) state
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch']
-        best_epoch = checkpoint['epoch']
-        best_acc = checkpoint['metrics']['accuracy']
-        best_metrics = checkpoint.get('metrics', {})
+
+        # Load best model metrics for tracking
+        if os.path.exists(best_path):
+            best_ckpt = torch.load(best_path, map_location=device)
+            best_epoch = best_ckpt['epoch']
+            best_acc = best_ckpt['metrics']['accuracy']
+            best_metrics = best_ckpt.get('metrics', {})
 
         # Load summary info (optional counters/history)
         with open(summary_path, "r") as f:
@@ -39,10 +40,11 @@ def init_resume_state(model, optimizer, device,config):
             early_stop_counter = training_summary.get("early_stop_counter", 0)
             metric_file_path= training_summary.get("metrics_file", "")
             summary_status=training_summary.get("summary_status","")# "interrupted_or_incomplete",
-            with open(metric_file_path, "r") as m:
-                all_epoch_metrics = json.load(m)
+            if os.path.exists(metric_file_path):
+                with open(metric_file_path, "r") as m:
+                    all_epoch_metrics = json.load(m)
 
-        print(f"[INFO] Resumed at epoch {start_epoch} with total acc {best_acc:.4f} and early stop counter {early_stop_counter}")
+        print(f"[INFO] Resumed at epoch {start_epoch} with total acc {best_acc:.4f} from epoch {best_epoch} and early stop counter {early_stop_counter}")
     else:
         print(f"[INFO] Starting fresh training run by initializing training summary")
         training_summary=init_training_summary(config)
@@ -65,11 +67,12 @@ def fill_trackers_from_history(all_epoch_metrics,
     if summary_status != "interrupted_or_incomplete":
         return
 
-    # Trim metrics in-place
-    trimmed = [r for r in all_epoch_metrics if r["epoch"] <= best_epoch]
-    all_epoch_metrics[:] = trimmed
+    # # Trim metrics in-place
+    # trimmed = [r for r in all_epoch_metrics if r["epoch"] <= best_epoch]
+    # all_epoch_metrics[:] = trimmed
 
-    for record in trimmed:
+    # for record in trimmed:
+    for record in all_epoch_metrics:
         # training
         train_loss_energy_list.append(record["train_loss_energy"])
         train_loss_alpha_list.append(record["train_loss_alpha"])
