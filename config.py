@@ -68,7 +68,10 @@ def get_config(config_path=None):
     group_size    = cfg_dict.get("group_size", 1)
 
     # --- Split CSV Paths based on group_size ---
-    basename     = f"file_labels_aggregated_g{group_size}"
+    if group_size > 1 :
+        basename     = f"file_labels_aggregated_g{group_size}"
+    else:
+        basename     = "file_labels"
     train_csv    = os.path.join(dataset_root_dir, f"{basename}_train.csv")
     val_csv      = os.path.join(dataset_root_dir, f"{basename}_val.csv")
     test_csv     = os.path.join(dataset_root_dir, f"{basename}_test.csv")
