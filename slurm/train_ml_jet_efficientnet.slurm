@@ -1,8 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=ml-jet-efficientnet-b32-g1
+#SBATCH --job-name=jet-efficientnet-b32-g500-lr1e-1
 #SBATCH --partition=ecscp
-#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
-#SBATCH --cpus-per-task=1
+#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:4
+#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
 #SBATCH --time=504:00:00
 #SBATCH --nodes=1

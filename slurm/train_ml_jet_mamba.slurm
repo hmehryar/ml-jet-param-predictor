@@ -1,21 +1,30 @@
 #!/bin/bash
-#SBATCH --job-name=ml-jet-train-mamba
+#SBATCH --job-name=jet-mamba-b32-g500-lr1e-1
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=10G
-#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+#SBATCH --time=504:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --qos=express
 
-MODEL_TAG="Mamba"
-BATCH_SIZE=512
-EPOCHS=50
-LEARNING_RATE=0.001
-GLOBAL_MAX=121.79151153564453
-ROOT_DIR=~/hm_jetscapeml_source/data/jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_1000_balanced_unshuffled
-OUTPUT_DIR=training_output/
+nvidia-smi
+
+CONFIG_PATH="$1"
+if [ ! -f "$CONFIG_PATH" ]; then
+  echo "❌ Config file not found: $CONFIG_PATH"
+  exit 1
+fi
+
+# === Extract YAML Fields Using Python ===
+get_yaml_value() {
+  python -c "import yaml; print(yaml.safe_load(open('$CONFIG_PATH'))['$1'])"
+}
+MODEL_TAG=$(get_yaml_value model_tag)
+BATCH_SIZE=$(get_yaml_value batch_size)
+EPOCHS=$(get_yaml_value epochs)
+LEARNING_RATE=$(get_yaml_value learning_rate)
 
 RUN_TAG="${MODEL_TAG}_bs${BATCH_SIZE}_ep${EPOCHS}_lr$(printf %.0e $LEARNING_RATE)"
 LOGS_DIR="logs"
@@ -28,8 +37,14 @@ module purge
 ml python/3.7
 source /wsu/el7/pre-compiled/python/3.7/etc/profile.d/conda.sh
 conda init
-conda activate tensorflow-gpu-v2.8
+# conda activate tensorflow-gpu-v2.8
+conda activate pytorch
 
 START_TIME=$(date +%s)
+jupyter nbconvert --to script train.ipynb --output train_${MODEL_TAG}_${SLURM_JOB_ID}
+python train_${MODEL_TAG}_${SLURM_JOB_ID}.py --config "$CONFIG_PATH"
 
-python train.py --root_dir $ROOT_DIR --global_max $GLOBAL_MAX --batch_size $BATCH_SIZE --epochs $EPOCHS --learning_rate $LEARNING_RATE
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+echo "[INFO] Training completed in $((DURATION / 3600))h $(((DURATION % 3600) / 60))m $((DURATION % 60))s"
+echo "[INFO] SLURM Job finished on: $(date)"
