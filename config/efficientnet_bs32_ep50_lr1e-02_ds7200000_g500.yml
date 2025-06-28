@@ -3,7 +3,7 @@ backbone: efficientnet
 batch_size: 32
 epochs: 50
 learning_rate: 0.01
-patience: 20
+patience: 10
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453
 output_dir: training_output/
