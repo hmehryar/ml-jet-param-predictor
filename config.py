@@ -67,6 +67,17 @@ def get_config(config_path=None):
     output_base = cfg_dict.get("output_dir", "training_output/")
     group_size    = cfg_dict.get("group_size", 1)
 
+    # Set default scheduler settings if not present
+    scheduler_defaults = {
+        'type': 'ReduceLROnPlateau',
+        'mode': 'max',
+        'factor': 0.5,
+        'patience': 4,
+        'verbose': True
+    }
+    scheduler=cfg_dict.get('scheduler', scheduler_defaults)
+
+
     # --- Split CSV Paths based on group_size ---
     if group_size > 1 :
         basename     = f"file_labels_aggregated_g{group_size}"
@@ -76,7 +87,8 @@ def get_config(config_path=None):
     val_csv      = os.path.join(dataset_root_dir, f"{basename}_val.csv")
     test_csv     = os.path.join(dataset_root_dir, f"{basename}_test.csv")
 
-    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}"
+    scheduler_type = scheduler.get('type', 'NoScheduler')
+    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}"
     output_dir = os.path.join(output_base, run_tag)
 
     return SimpleNamespace(**{
@@ -94,6 +106,7 @@ def get_config(config_path=None):
         "test_csv": test_csv,
         "output_dir": output_dir,
         "group_size": group_size,
+        "scheduler": scheduler
     })
 
 if __name__ == "__main__":
