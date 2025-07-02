@@ -65,10 +65,10 @@ def update_val_logs(val_metrics,
             val_acc_alpha_list,
             val_acc_q0_list)
 
-def record_and_save_epoch(epoch, train_metrics, val_metrics, all_epoch_metrics, output_dir):
+def record_and_save_epoch(epoch, train_metrics, val_metrics, lr, all_epoch_metrics, output_dir):
     epoch_record = {
         "epoch": epoch + 1,
-
+        "learning_rate": lr,
         # Train losses
         "train_loss": train_metrics["loss"],
         "train_loss_energy": train_metrics["loss_energy"],
