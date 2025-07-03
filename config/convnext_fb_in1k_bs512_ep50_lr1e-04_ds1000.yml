@@ -1,5 +1,5 @@
-model_tag: ConvNeXt
-backbone: convnext
+model_tag: ConvNeXt_FB_IN1K
+backbone: convnext_fb_in1k
 batch_size: 512
 epochs: 50
 learning_rate: 0.1

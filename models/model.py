@@ -7,9 +7,125 @@ from mamba_ssm import Mamba
 from timm.models.swin_transformer import SwinTransformer
 from timm.models.vision_transformer import VisionTransformer
 
+
+import argparse
+
+
+# from transformers import ConvNextModel
+# class ConvNextBackboneWrapper(nn.Module):
+#     def __init__(self, hf_model):
+#         super().__init__()
+#         self.model = hf_model
+
+#     def forward(self, x):
+#         out = self.model(pixel_values=x)
+#         return out.last_hidden_state.flatten(1)  # Shape: [B, C]
+
+# def load_hf_convnext_backbone(hf_repo="ahsanjavid/convnext-tiny-finetuned-cifar10"):
+#     model = ConvNextModel.from_pretrained(hf_repo)
+#     # return ConvNextBackboneWrapper(model)
+#     return model
+
+
+# class ConvNextBackboneWrapper(nn.Module):
+#     def __init__(self, hf_model):
+#         super().__init__()
+#         self.model = hf_model
+
+#     def forward(self, x):
+#         # Hugging Face ConvNeXt expects input as `pixel_values=...`
+#         out = self.model(pixel_values=x)
+#         # Extract last hidden state [B, C, 1, 1] → flatten to [B, C]
+#         last_hidden = out.last_hidden_state
+#         return last_hidden.flatten(1)
+
+
+# from transformers import ConvNextForImageClassification
+# def load_hf_convnext_backbone(hf_repo="ahsanjavid/convnext-tiny-finetuned-cifar10", to_gray=True):
+#     model = ConvNextForImageClassification.from_pretrained(hf_repo)
+#     model.config.num_channels = 1
+
+#     backbone = model.convnext  # Extract the backbone (without the classifier head)
+#     # backbone=model
+
+#     if to_gray:
+#         # Convert first conv layer from (3,...) → (1,...)
+#         old_conv = backbone.embeddings.patch_embeddings
+#         new_conv = nn.Conv2d(
+#             in_channels=1,
+#             out_channels=old_conv.out_channels,
+#             kernel_size=old_conv.kernel_size,
+#             stride=old_conv.stride,
+#             padding=old_conv.padding,
+#             bias=old_conv.bias is not None,
+#         )
+
+#         # Average RGB weights to grayscale
+#         with torch.no_grad():
+#             new_conv.weight[:] = old_conv.weight.mean(dim=1, keepdim=True)
+#             if old_conv.bias is not None:
+#                 new_conv.bias[:] = old_conv.bias
+#         backbone.embeddings.patch_embeddings = new_conv
+
+#     # return backbone
+#     return ConvNextBackboneWrapper(backbone)
+# class ConvNeXtCIFARClassifier(nn.Module):
+#     def __init__(self, input_shape=(1, 32, 32), pretrained=True):
+#         super().__init__()
+#         self.backbone_name = 'convnext_cifar'
+        
+#         # Load ConvNeXt-Tiny CIFAR10 pretrained
+#         self.backbone = timm.create_model(
+#             'convnext_tiny.fb_in22k_ft_in1k',  # Can be replaced with CIFAR if available
+#             pretrained=pretrained,
+#             in_chans=3,  # Keep 3 channels
+#             num_classes=0
+#         )
+#         self.features = self.backbone
+#         self.features.num_features = self.backbone.num_features
+
+#         self.energy_loss_head = nn.Linear(self.features.num_features, 1)
+#         self.alpha_head = nn.Linear(self.features.num_features, 3)
+#         self.q0_head = nn.Linear(self.features.num_features, 4)
+
+#     def forward(self, x):
+#         # Assume x: (B, 1, 32, 32) — replicate to 3 channels
+#         if x.shape[1] == 1:
+#             x = x.repeat(1, 3, 1, 1)
+#         feats = self.features(x)
+#         return {
+#             'energy_loss_output': self.energy_loss_head(feats),
+#             'alpha_output': self.alpha_head(feats),
+#             'q0_output': self.q0_head(feats),
+#         }
+class ConvNeXtClassifier(nn.Module):
+    def __init__(self, input_shape=(1, 32, 32), pretrained=True, model_name='convnext_tiny'):
+        super().__init__()
+        self.backbone_name = 'convnext'
+
+        self.backbone = timm.create_model(
+            model_name, pretrained=pretrained, in_chans=3, num_classes=0
+        )
+        self.features = self.backbone
+        self.features.num_features = self.backbone.num_features
+
+        self.energy_loss_head = nn.Linear(self.features.num_features, 1)
+        self.alpha_head = nn.Linear(self.features.num_features, 3)
+        self.q0_head = nn.Linear(self.features.num_features, 4)
+
+    def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
+        feats = self.features(x)
+        return {
+            'energy_loss_output': self.energy_loss_head(feats),
+            'alpha_output': self.alpha_head(feats),
+            'q0_output': self.q0_head(feats),
+        }
+
+
 # from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
 import torch.nn.functional as F
-import argparse
 
 class MambaVisionMultiHead(nn.Module):
     def __init__(self, in_chans=1, img_size=32, embed_dim=128, mamba_layers=4, mamba_hidden=256):
@@ -39,7 +155,8 @@ class MambaVisionMultiHead(nn.Module):
         }
 
 class MultiHeadClassifier(nn.Module):
-    def __init__(self, backbone='efficientnet', input_shape=(1, 32, 32), d_model=512):
+    def __init__(self, backbone='efficientnet', input_shape=(1, 32, 32), 
+                 d_model=512, init_weights='imagenet'):
         super(MultiHeadClassifier, self).__init__()
 
         self.backbone_name = backbone.lower()
@@ -123,6 +240,23 @@ class MultiHeadClassifier(nn.Module):
                 in_chans=input_shape[0],
                 img_size=input_shape[1]
             )
+        # elif self.backbone_name == 'convnext_cifar':
+        #     self.backbone = load_hf_convnext_backbone()
+        #     self.features = self.backbone
+        #     # self.features.num_features = self.backbone.layernorm.normalized_shape[0]
+        #     # Automatically detect feature dim
+        #     with torch.no_grad():
+        #         dummy = torch.randn(1, 1, 32, 32)
+        #         self.features.num_features = self.features(dummy).shape[1]
+        # elif self.backbone_name == 'convnext_cifar':
+        #     self.backbone = load_hf_convnext_backbone()
+        #     self.features = self.backbone
+
+        #     # Automatically detect feature dimension
+        #     with torch.no_grad():
+        #         # dummy = torch.randn(1, 3, 32, 32)  # 3-channel dummy input
+        #         # self.features.num_features = self.features(dummy).shape[1]
+        #         self.features.num_features = self.backbone.layernorm.normalized_shape[0]
         else:
             raise ValueError(f"Unsupported backbone model: {self.backbone_name}")
 
@@ -140,21 +274,55 @@ class MultiHeadClassifier(nn.Module):
     def forward(self, x):
         if self.backbone_name == 'mamba_vision':
             return self.features(x)
+        
         feats = self.features(x)
+        # if self.backbone_name == 'convnext_cifar' and x.shape[1] == 1:
+        #     x = x.repeat(1, 3, 1, 1)
+        #     feats = self.features(pixel_values=x) 
         return {
             'energy_loss_output': self.energy_loss_head(feats),
             'alpha_output': self.alpha_head(feats),
             'q0_output': self.q0_head(feats)
         }
+# Helper: Weight Initialization
 
+def weights_init_normal(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        nn.init.normal_(m.weight, mean=0.0, std=0.02)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
 # ---------------------------
 # Model Creation Helper
 # ---------------------------
-def create_model(backbone='efficientnet', input_shape=(1, 32, 32), learning_rate=0.001, d_model=512):
+def create_model(backbone='efficientnet', input_shape=(1, 32, 32),
+                learning_rate=0.001, d_model=512,
+                init_weights='imagenet'):# 'imagenet', 'cifar', or 'gaussian'
     """
     Helper function to create and compile a MultiHeadClassifier.
     """
-    model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape, d_model=d_model)
+    # if backbone == 'convnext_cifar':
+    #     model = ConvNeXtCIFARClassifier(input_shape=input_shape,pretrained=pretrained)
+    if backbone.startswith('convnext'):
+        tokens = backbone.split('_')
+        init = tokens[-1] if len(tokens) > 1 else 'fb_in1k'
+
+        if init == 'fb_in22k_ft_in1k':
+            model_name = 'convnext_tiny.fb_in22k_ft_in1k'
+            pretrained = True
+        elif init == 'fb_in1k':
+            model_name = 'convnext_tiny.fb_in1k'
+            pretrained = True
+        else:
+            model_name = 'convnext_tiny'
+            pretrained = False
+
+        model = ConvNeXtClassifier(input_shape=input_shape, pretrained=pretrained, model_name=model_name)
+
+        if init == 'gaussian':
+            model.apply(weights_init_normal)
+    else:
+        model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape,
+                                d_model=d_model, init_weights=init_weights)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -194,13 +362,17 @@ def main():
     # Display the model summary
     print("\n[INFO] Model Summary:")
     print(model)
-    # model.eval()  # Set model to evaluation mode
+    
 
     # # Example random input for testing
-    # dummy_input = torch.randn(1, *args.input_shape)  # Example batch with one 32x32 event image
-    # outputs = model(dummy_input)
+    x_gray = torch.randn(16, 1, 32, 32)
+    # 1-channel grayscale batch
+    print(f"\n[INFO] Model output for input shape {x_gray.shape}:")
+    out = model(x_gray)
 
-    # print(f"\n[INFO] Model summary for {args.backbone}:")
+    print(out)  # Should be a dict with logits
+
+    
     # for key, value in outputs.items():
     #     print(f"{key}: {value.shape}")
 
