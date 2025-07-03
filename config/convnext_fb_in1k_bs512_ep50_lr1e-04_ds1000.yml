@@ -2,7 +2,7 @@ model_tag: ConvNeXt_FB_IN1K
 backbone: convnext_fb_in1k
 batch_size: 512
 epochs: 50
-learning_rate: 0.1
+learning_rate: 0.0001
 patience: 12
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453

@@ -303,22 +303,29 @@ def create_model(backbone='efficientnet', input_shape=(1, 32, 32),
     # if backbone == 'convnext_cifar':
     #     model = ConvNeXtCIFARClassifier(input_shape=input_shape,pretrained=pretrained)
     if backbone.startswith('convnext'):
-        tokens = backbone.split('_')
-        init = tokens[-1] if len(tokens) > 1 else 'fb_in1k'
+        suffix = backbone[len('convnext_'):]  # get everything after 'convnext_'
 
-        if init == 'fb_in22k_ft_in1k':
+        if suffix == 'fb_in22k_ft_in1k':
             model_name = 'convnext_tiny.fb_in22k_ft_in1k'
             pretrained = True
-        elif init == 'fb_in1k':
+        elif suffix == 'fb_in1k':
             model_name = 'convnext_tiny.fb_in1k'
             pretrained = True
-        else:
+        elif suffix == 'gaussian':
             model_name = 'convnext_tiny'
             pretrained = False
+        elif suffix == '':
+            model_name = 'convnext_tiny'
+            pretrained = False
+        else:
+            raise ValueError(f"Unrecognized convnext variant: '{suffix}'")
+        
+        print(f"Using model: {model_name}, pretrained: {pretrained}")
+
 
         model = ConvNeXtClassifier(input_shape=input_shape, pretrained=pretrained, model_name=model_name)
 
-        if init == 'gaussian':
+        if suffix == 'gaussian':
             model.apply(weights_init_normal)
     else:
         model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape,

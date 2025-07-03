@@ -2,7 +2,7 @@ model_tag: ConvNeXt_g500
 backbone: convnext
 batch_size: 32
 epochs: 50
-learning_rate: 0.1
+learning_rate: 0.001
 patience: 12
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453
