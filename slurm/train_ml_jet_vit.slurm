@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=jet-vit-RLRP
+#SBATCH --job-name=jet-vit-tiny
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
