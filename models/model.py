@@ -11,93 +11,6 @@ from timm.models.vision_transformer import VisionTransformer
 import argparse
 
 
-# from transformers import ConvNextModel
-# class ConvNextBackboneWrapper(nn.Module):
-#     def __init__(self, hf_model):
-#         super().__init__()
-#         self.model = hf_model
-
-#     def forward(self, x):
-#         out = self.model(pixel_values=x)
-#         return out.last_hidden_state.flatten(1)  # Shape: [B, C]
-
-# def load_hf_convnext_backbone(hf_repo="ahsanjavid/convnext-tiny-finetuned-cifar10"):
-#     model = ConvNextModel.from_pretrained(hf_repo)
-#     # return ConvNextBackboneWrapper(model)
-#     return model
-
-
-# class ConvNextBackboneWrapper(nn.Module):
-#     def __init__(self, hf_model):
-#         super().__init__()
-#         self.model = hf_model
-
-#     def forward(self, x):
-#         # Hugging Face ConvNeXt expects input as `pixel_values=...`
-#         out = self.model(pixel_values=x)
-#         # Extract last hidden state [B, C, 1, 1] → flatten to [B, C]
-#         last_hidden = out.last_hidden_state
-#         return last_hidden.flatten(1)
-
-
-# from transformers import ConvNextForImageClassification
-# def load_hf_convnext_backbone(hf_repo="ahsanjavid/convnext-tiny-finetuned-cifar10", to_gray=True):
-#     model = ConvNextForImageClassification.from_pretrained(hf_repo)
-#     model.config.num_channels = 1
-
-#     backbone = model.convnext  # Extract the backbone (without the classifier head)
-#     # backbone=model
-
-#     if to_gray:
-#         # Convert first conv layer from (3,...) → (1,...)
-#         old_conv = backbone.embeddings.patch_embeddings
-#         new_conv = nn.Conv2d(
-#             in_channels=1,
-#             out_channels=old_conv.out_channels,
-#             kernel_size=old_conv.kernel_size,
-#             stride=old_conv.stride,
-#             padding=old_conv.padding,
-#             bias=old_conv.bias is not None,
-#         )
-
-#         # Average RGB weights to grayscale
-#         with torch.no_grad():
-#             new_conv.weight[:] = old_conv.weight.mean(dim=1, keepdim=True)
-#             if old_conv.bias is not None:
-#                 new_conv.bias[:] = old_conv.bias
-#         backbone.embeddings.patch_embeddings = new_conv
-
-#     # return backbone
-#     return ConvNextBackboneWrapper(backbone)
-# class ConvNeXtCIFARClassifier(nn.Module):
-#     def __init__(self, input_shape=(1, 32, 32), pretrained=True):
-#         super().__init__()
-#         self.backbone_name = 'convnext_cifar'
-        
-#         # Load ConvNeXt-Tiny CIFAR10 pretrained
-#         self.backbone = timm.create_model(
-#             'convnext_tiny.fb_in22k_ft_in1k',  # Can be replaced with CIFAR if available
-#             pretrained=pretrained,
-#             in_chans=3,  # Keep 3 channels
-#             num_classes=0
-#         )
-#         self.features = self.backbone
-#         self.features.num_features = self.backbone.num_features
-
-#         self.energy_loss_head = nn.Linear(self.features.num_features, 1)
-#         self.alpha_head = nn.Linear(self.features.num_features, 3)
-#         self.q0_head = nn.Linear(self.features.num_features, 4)
-
-#     def forward(self, x):
-#         # Assume x: (B, 1, 32, 32) — replicate to 3 channels
-#         if x.shape[1] == 1:
-#             x = x.repeat(1, 3, 1, 1)
-#         feats = self.features(x)
-#         return {
-#             'energy_loss_output': self.energy_loss_head(feats),
-#             'alpha_output': self.alpha_head(feats),
-#             'q0_output': self.q0_head(feats),
-#         }
 class ConvNeXtClassifier(nn.Module):
     def __init__(self, input_shape=(1, 32, 32), pretrained=True, model_name='convnext_tiny'):
         super().__init__()
@@ -240,23 +153,6 @@ class MultiHeadClassifier(nn.Module):
                 in_chans=input_shape[0],
                 img_size=input_shape[1]
             )
-        # elif self.backbone_name == 'convnext_cifar':
-        #     self.backbone = load_hf_convnext_backbone()
-        #     self.features = self.backbone
-        #     # self.features.num_features = self.backbone.layernorm.normalized_shape[0]
-        #     # Automatically detect feature dim
-        #     with torch.no_grad():
-        #         dummy = torch.randn(1, 1, 32, 32)
-        #         self.features.num_features = self.features(dummy).shape[1]
-        # elif self.backbone_name == 'convnext_cifar':
-        #     self.backbone = load_hf_convnext_backbone()
-        #     self.features = self.backbone
-
-        #     # Automatically detect feature dimension
-        #     with torch.no_grad():
-        #         # dummy = torch.randn(1, 3, 32, 32)  # 3-channel dummy input
-        #         # self.features.num_features = self.features(dummy).shape[1]
-        #         self.features.num_features = self.backbone.layernorm.normalized_shape[0]
         else:
             raise ValueError(f"Unsupported backbone model: {self.backbone_name}")
 
@@ -291,6 +187,40 @@ def weights_init_normal(m):
         nn.init.normal_(m.weight, mean=0.0, std=0.02)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
+
+class ViTClassifier(nn.Module):
+    def __init__(self, input_shape=(1, 32, 32), pretrained=True, model_name='vit_base_patch16_224'):
+        super().__init__()
+        self.backbone_name = 'vit'
+
+        # Load ViT backbone from timm
+        self.backbone = timm.create_model(
+            model_name,
+            pretrained=pretrained,
+            in_chans=3,  # Use 3 channels, replicate grayscale input if needed
+            num_classes=0
+        )
+        self.features = self.backbone
+        self.features.num_features = self.backbone.num_features  # Get embedding dim
+
+        # Multi-task heads
+        self.energy_loss_head = nn.Linear(self.features.num_features, 1)
+        self.alpha_head = nn.Linear(self.features.num_features, 3)
+        self.q0_head = nn.Linear(self.features.num_features, 4)
+
+    def forward(self, x):
+        # If input is grayscale (1 channel), replicate to 3 channels
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
+        # Resize: (B, 3, 32, 32) → (B, 3, 224, 224)
+        x = F.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
+        feats = self.features(x)  # Shape: (B, C)
+        return {
+            'energy_loss_output': self.energy_loss_head(feats),
+            'alpha_output': self.alpha_head(feats),
+            'q0_output': self.q0_head(feats),
+        }
+
 # ---------------------------
 # Model Creation Helper
 # ---------------------------
@@ -327,6 +257,42 @@ def create_model(backbone='efficientnet', input_shape=(1, 32, 32),
 
         if suffix == 'gaussian':
             model.apply(weights_init_normal)
+    # Handle ViT Variants
+    elif backbone.startswith('vit'):
+        suffix = backbone[len('vit_'):]
+        # if suffix == 'augreg_in21k_ft_in1k':
+        #     model_name = 'vit_base_patch16_224.augreg_in21k_ft_in1k'
+        #     pretrained = True
+        # elif suffix == 'augreg_in21k':
+        #     model_name = 'vit_base_patch16_224.augreg_in21k'
+        #     pretrained = True
+        # elif suffix == 'gaussian':
+        #     model_name = 'vit_base_patch16_224'
+        #     pretrained = False
+        # elif suffix == '':
+        #     model_name = 'vit_base_patch16_224'
+        #     pretrained = False
+        if suffix == 'augreg_in21k_ft_in1k':
+            model_name = 'vit_tiny_patch16_224.augreg_in21k_ft_in1k'
+            pretrained = True
+        elif suffix == 'augreg_in21k':
+            model_name = 'vit_tiny_patch16_224.augreg_in21k'
+            pretrained = True
+        elif suffix == 'gaussian':
+            model_name = 'vit_tiny_patch16_224'
+            pretrained = False
+        elif suffix == '':
+            model_name = 'vit_tiny_patch16_224'
+            pretrained = False
+        else:
+            raise ValueError(f"Unrecognized vit variant: '{suffix}'")
+
+        print(f"Using ViT model: {model_name}, pretrained: {pretrained}")
+        model = ViTClassifier(input_shape=input_shape, pretrained=pretrained, model_name=model_name)
+        if suffix == 'gaussian':
+            model.apply(weights_init_normal)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        return model, optimizer
     else:
         model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape,
                                 d_model=d_model, init_weights=init_weights)
