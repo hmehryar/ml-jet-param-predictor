@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=jet-convnext-tiny
+#SBATCH --job-name=jet-convnext-gaussian-lr-4
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
