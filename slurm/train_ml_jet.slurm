@@ -3,7 +3,7 @@
 #SBATCH --partition=ecscp                     # Partition (adjust if needed)
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:2  # 2 A100 GPUs
 #SBATCH --cpus-per-task=8                     # Number of CPU cores
-#SBATCH --mem=100G                            # Memory allocation
+#SBATCH --mem=8G                            # Memory allocation
 #SBATCH --time=12:00:00                       # Maximum run time (12 hours)
 #SBATCH --nodes=1                             # Single node
 #SBATCH --ntasks=1                            # Single task
