@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=jet-mamba-RLRP
+#SBATCH --job-name=jet-mamba-in12k-ft1k
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
