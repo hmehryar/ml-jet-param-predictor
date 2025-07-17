@@ -9,6 +9,8 @@
 #SBATCH --ntasks=1
 #SBATCH --qos=express
 
+nvidia-smi
+
 CONFIG_PATH="$1"
 # CONFIG_PATH="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml"
 # CONFIG_PATH="config/efficientnet_bs512_ep50_lr1e-04_ds1000.yml"
