@@ -4,6 +4,8 @@ import os
 import torch
 import json
 from train_utils.training_summary import init_training_summary
+from numpy.core.multiarray import scalar
+torch.serialization.add_safe_globals([scalar])
 
 def init_resume_state(model, optimizer, device,config):
     print(f"[INFO] Init Resume/Training Parameters")
@@ -29,7 +31,7 @@ def init_resume_state(model, optimizer, device,config):
 
         # Load best model metrics for tracking
         if os.path.exists(best_path):
-            best_ckpt = torch.load(best_path, map_location=device)
+            best_ckpt = torch.load(best_path, map_location=device, weights_only=False)
             best_epoch = best_ckpt['epoch']
             best_acc = best_ckpt['metrics']['accuracy']
             best_metrics = best_ckpt.get('metrics', {})

@@ -18,6 +18,7 @@ logs/
 wandb/
 training_output/
 /train/archive/
+/train/still_running
 
 # VS Code settings
 .vscode/
