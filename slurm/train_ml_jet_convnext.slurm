@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=jet-convnext-gaussian-lr-4
+
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
@@ -8,6 +9,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --qos=express
+
+
+nvidia-smi
 
 CONFIG_PATH="$1"
 if [ ! -f "$CONFIG_PATH" ]; then
