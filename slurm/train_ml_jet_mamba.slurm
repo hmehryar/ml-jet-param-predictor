@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=jet-mambaout
 #SBATCH --partition=ecscp
-#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:2
+#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=8G
 #SBATCH --time=504:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks=2
+#SBATCH --ntasks=1
 #SBATCH --qos=express
 
 nvidia-smi

@@ -42,3 +42,35 @@ class MambaClassifier(nn.Module):
             'alpha_output': self.alpha_head(feats),
             'q0_output': self.q0_head(feats),
         }
+
+# from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
+import torch.nn.functional as F
+
+class MambaVisionMultiHead(nn.Module):
+    
+    def __init__(self, in_chans=1, img_size=32, embed_dim=128, mamba_layers=4, mamba_hidden=256):
+        from mamba_ssm import Mamba
+        super().__init__()
+        self.proj = nn.Sequential(
+            nn.Conv2d(in_chans, embed_dim, kernel_size=3, padding=1),
+            nn.Flatten(2),
+            nn.Linear(img_size*img_size, img_size),
+        )
+        self.norm= nn.LayerNorm(embed_dim)
+        self.mamba = Mamba(d_model=embed_dim, d_state=mamba_hidden, d_conv=mamba_layers)
+        self.pool = nn.AdaptiveAvgPool1d(1)
+        self.head_energy = nn.Linear(embed_dim, 1)
+        self.head_alpha  = nn.Linear(embed_dim, 3)
+        self.head_q0     = nn.Linear(embed_dim, 4)
+
+    def forward(self, x):
+        # x: (B,1,32,32)
+        z = self.proj(x)               # (B, embed_dim, 32)
+        z = z.permute(2,0,1)           # (seq_len, B, embed_dim)
+        out_seq = self.mamba(z)        # (seq_len, B, embed_dim)
+        feat = out_seq[-1]             # (B, embed_dim)
+        return {
+            'energy_loss_output': self.head_energy(feat),
+            'alpha_output':  self.head_alpha(feat),
+            'q0_output':     self.head_q0(feat)
+        }

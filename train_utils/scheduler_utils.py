@@ -15,7 +15,7 @@ def create_scheduler(optimizer, cfg, train_loader=None):
             mode=cfg.scheduler.get("mode", "max"),
             factor=cfg.scheduler.get("factor", 0.5),
             patience=cfg.scheduler.get("patience", 4),
-            verbose=cfg.scheduler.get("verbose", True),
+            # verbose=cfg.scheduler.get("verbose", True),
             min_lr=cfg.scheduler.get("min_lr", 1e-6)
         )
     elif scheduler_type == "StepLR":
