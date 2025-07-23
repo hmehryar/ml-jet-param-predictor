@@ -107,10 +107,11 @@ def split_file_list(file_label_list, train_ratio=0.8, val_ratio=0.1, test_ratio=
 class JetDataset(Dataset):
     """PyTorch Dataset for loading event images and multi-output labels."""
     
-    def __init__(self, file_label_list, global_max, transform=None):
+    def __init__(self, file_label_list, global_max, device='cuda',transform=None):
         self.file_label_list = file_label_list
         self.global_max = global_max
         self.transform = transform
+        self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
 
     def __len__(self):
         return len(self.file_label_list)
@@ -123,9 +124,9 @@ class JetDataset(Dataset):
         event = np.expand_dims(event, axis=0)  # Shape: (1, 32, 32) for PyTorch
         
         # Convert labels to tensors
-        energy_loss_label = torch.tensor([label[0]], dtype=torch.long)  # (1,)
-        alpha_label = torch.tensor([label[1]], dtype=torch.long)             # (3-class)
-        q0_label = torch.tensor([label[2]], dtype=torch.long)                # (4-class)
+        energy_loss_label = torch.tensor([label[0]], dtype=torch.long, device=self.device)  # (1,)
+        alpha_label = torch.tensor([label[1]], dtype=torch.long, device=self.device)             # (3-class)
+        q0_label = torch.tensor([label[2]], dtype=torch.long, device=self.device)                # (4-class)
 
         labels = {
             'energy_loss_output': energy_loss_label,
@@ -137,7 +138,7 @@ class JetDataset(Dataset):
         if self.transform:
             event = self.transform(event)
 
-        return torch.tensor(event), labels
+        return torch.tensor(event, device=self.device), labels
 
 class AggregatedJetDataset(Dataset):
     def __init__(self, agg_csv, root_dir, global_max, device='cuda'):
@@ -188,8 +189,7 @@ def load_split_from_csv(filename, root_dir):
             result.append((absolute_path, label))
     return result
 
-def get_dataloaders(cfg):
-    
+def get_dataloaders(cfg, device='cuda'):
     """
     Create DataLoader objects for training, validation, and testing datasets.
     If cfg.group_size > 1, uses AggregatedJetDataset; otherwise uses JetDataset.
@@ -197,9 +197,9 @@ def get_dataloaders(cfg):
     # Choose dataset class based on whether we're aggregating
     if cfg.group_size> 1:
         # Aggregated splits are CSVs with columns: agg_id, file_paths, energy_loss, alpha, q0
-        train_ds = AggregatedJetDataset(cfg.train_csv, cfg.dataset_root_dir,cfg.global_max)
-        val_ds   = AggregatedJetDataset(cfg.val_csv, cfg.dataset_root_dir,cfg.global_max)
-        test_ds  = AggregatedJetDataset(cfg.test_csv, cfg.dataset_root_dir,cfg.global_max)
+        train_ds = AggregatedJetDataset(cfg.train_csv, cfg.dataset_root_dir,cfg.global_max, device=device)
+        val_ds   = AggregatedJetDataset(cfg.val_csv, cfg.dataset_root_dir,cfg.global_max, device=device)
+        test_ds  = AggregatedJetDataset(cfg.test_csv, cfg.dataset_root_dir,cfg.global_max, device=device)
 
     else:
         '''Create DataLoader objects for training, validation, and testing datasets.'''
@@ -207,9 +207,9 @@ def get_dataloaders(cfg):
         val_list = load_split_from_csv(cfg.val_csv, cfg.dataset_root_dir)
         test_list = load_split_from_csv(cfg.test_csv, cfg.dataset_root_dir)
 
-        train_ds = JetDataset(train_list, global_max=cfg.global_max)
-        val_ds = JetDataset(val_list, global_max=cfg.global_max)
-        test_ds = JetDataset(test_list, global_max=cfg.global_max)
+        train_ds = JetDataset(train_list, global_max=cfg.global_max, device=device)
+        val_ds = JetDataset(val_list, global_max=cfg.global_max, device=device)
+        test_ds = JetDataset(test_list, global_max=cfg.global_max, device=device)
     print(f"[INFO] Training samples: {len(train_ds)}")
     print(f"[INFO] Validation samples: {len(val_ds)}")
     print(f"[INFO] Test samples: {len(test_ds)}")
