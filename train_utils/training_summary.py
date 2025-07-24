@@ -33,6 +33,8 @@ def finalize_training_summary(summary, best_epoch, best_acc, best_metrics, outpu
 
 def save_training_summary(summary, output_dir):
     path = os.path.join(output_dir, "training_summary.json")
+    # build the path if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
     with open(path, "w") as f:
         json.dump(summary, f, indent=2)
     print(f"[INFO] 📄 Training summary saved to: {path}")
