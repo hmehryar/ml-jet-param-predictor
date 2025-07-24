@@ -1,23 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=jet-mambaout-in12k-ft-in1k
+#SBATCH --job-name=jet-mambaout-gaussian-bs128
 
-#SBATCH --partition=ecscp
-#SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=10G
-#SBATCH --time=504:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --qos=express
-
-##SBATCH --constraint=v100
-##SBATCH --gres=gpu:3
-##SBATCH --cpus-per-task=3
-##SBATCH --mem=48G
+##SBATCH --partition=ecscp
+##SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
+##SBATCH --cpus-per-task=1
+##SBATCH --mem=10G
 ##SBATCH --time=504:00:00
 ##SBATCH --nodes=1
 ##SBATCH --ntasks=1
-##SBATCH --qos=gpu
+##SBATCH --qos=express
+
+#SBATCH --constraint=v100
+#SBATCH --gres=gpu:3
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=48G
+#SBATCH --time=504:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=3
+#SBATCH --qos=gpu
 
 nvidia-smi
 
