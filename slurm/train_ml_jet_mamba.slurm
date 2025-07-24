@@ -11,12 +11,12 @@
 ##SBATCH --qos=express
 
 #SBATCH --constraint=v100
-#SBATCH --gres=gpu:3
+#SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=48G
+#SBATCH --mem=60G
 #SBATCH --time=504:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks=3
+#SBATCH --ntasks=4
 #SBATCH --qos=gpu
 
 nvidia-smi
