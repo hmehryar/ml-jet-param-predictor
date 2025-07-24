@@ -39,6 +39,7 @@ def get_config(config_path=None):
         print("[INFO] Detected WSL environment")
     elif system == "Linux" and "ds044955" in hostname and "arsalan" in user:
         base_path = "/home/arsalan/Projects/110_JetscapeML/hm_jetscapeml_source/data"
+        # base_path = "/home/arsalan/wsu-grid/hm_jetscapeml_source/data/"
         print("[INFO] Detected native Ubuntu host: DS044955")
     elif system == "Linux" and "gy4065" in user:
         base_path = "/wsu/home/gy/gy40/gy4065/hm_jetscapeml_source/data"

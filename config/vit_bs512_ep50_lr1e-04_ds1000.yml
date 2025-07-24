@@ -7,9 +7,9 @@ backbone: vit_augreg_in21k_ft_in1k
 # model_tag: ViT_tiny_patch16_224
 # backbone: vit
 batch_size: 32
-epochs: 50
+epochs: 12
 learning_rate: 0.0001
-patience: 12
+patience: 3
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453
 output_dir: training_output/
