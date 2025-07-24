@@ -51,9 +51,18 @@ def get_config(config_path=None):
     dataset_root_dir = os.path.join(base_path, dataset_subdir)
     print(f"[INFO] Using dataset root: {dataset_root_dir}")
 
-    match = re.search(r"size_(\d+)", dataset_root_dir)
-    dataset_size = match.group(1) if match else "unknown"
-    print(f"[INFO] Detected dataset size: {dataset_size}")
+    # --- Dataset Size ---
+    if "dataset_size" in cfg_dict:
+        dataset_size = int(cfg_dict["dataset_size"])
+        print(f"[INFO] Using dataset_size from config: {dataset_size}")
+    else:
+        match = re.search(r"size_(\d+)", dataset_root_dir)
+        dataset_size = match.group(1) if match else "unknown"
+        print(f"[INFO] Extracted dataset_size from path: {dataset_size}")
+
+    # match = re.search(r"size_(\d+)", dataset_root_dir)
+    # dataset_size = match.group(1) if match else "unknown"
+    # print(f"[INFO] Detected dataset size: {dataset_size}")
 
     # --- Model Configs ---
     model_tag = cfg_dict.get("model_tag")
@@ -80,7 +89,7 @@ def get_config(config_path=None):
 
     # --- Split CSV Paths based on group_size ---
     if group_size > 1 :
-        basename     = f"file_labels_aggregated_g{group_size}"
+        basename     = f"file_labels_aggregated_ds{dataset_size}_g{group_size}"
     else:
         basename     = "file_labels"
     train_csv    = os.path.join(dataset_root_dir, f"{basename}_train.csv")
@@ -106,7 +115,9 @@ def get_config(config_path=None):
         "test_csv": test_csv,
         "output_dir": output_dir,
         "group_size": group_size,
-        "scheduler": scheduler
+        "scheduler": scheduler,
+        "dataset_size": dataset_size
+
     })
 
 if __name__ == "__main__":
