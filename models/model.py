@@ -91,6 +91,7 @@ class MultiHeadClassifier(nn.Module):
             # 2) Feature dimension from ViT’s output:
             self.features.num_features = self.backbone.embed_dim  # 192
         elif self.backbone_name == 'mamba_vision':
+            from models.model_mamba import MambaVisionMultiHead
               # Use the MambaVisionMultiHead as a self-contained backbone
             self.features = MambaVisionMultiHead(
                 in_chans=input_shape[0],

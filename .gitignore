@@ -14,11 +14,13 @@ __pycache__/
 
 # TensorFlow checkpoints, logs
 checkpoints/
+experiments/
 logs/
 wandb/
 training_output/
 /train/archive/
 /train/still_running
+
 
 # VS Code settings
 .vscode/
