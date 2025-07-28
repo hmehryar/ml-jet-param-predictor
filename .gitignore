@@ -14,7 +14,8 @@ __pycache__/
 
 # TensorFlow checkpoints, logs
 checkpoints/
-experiments/
+# experiments/*/logs/
+
 logs/
 wandb/
 training_output/

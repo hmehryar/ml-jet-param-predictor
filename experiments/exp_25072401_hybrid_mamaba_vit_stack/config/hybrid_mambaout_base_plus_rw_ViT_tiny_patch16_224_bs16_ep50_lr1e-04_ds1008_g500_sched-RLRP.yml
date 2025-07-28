@@ -1,5 +1,5 @@
 model_tag: mambaout_base_plus_rw_ViT_tiny_patch16_224_in1k_g500
-backbone: [mambaout_base_plus_rw,ViT_tiny_patch16_224_g500]
+backbone: [mambaout_base_plus_rw,vit_tiny_patch16_224]
 batch_size: 16
 epochs: 50
 learning_rate: 0.0001
