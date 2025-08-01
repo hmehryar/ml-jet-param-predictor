@@ -1,7 +1,7 @@
 model_tag: ConvNeXt_GAUSSIAN
 backbone: convnext_gaussian
 batch_size: 512
-epochs: 50
+epochs: 2
 learning_rate: 0.0001
 patience: 12
 input_shape: [1, 32, 32]

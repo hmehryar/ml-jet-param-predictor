@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+from sklearn.metrics import ConfusionMatrixDisplay
 
 def plot_train_val_metrics(train_losses, val_losses, train_accs, val_accs, output_dir):
     epochs = range(1, len(train_losses) + 1)
@@ -99,4 +100,85 @@ def plot_loss_accuracy(loss_list,
     print(f"📉 Loss plot saved as:\n  - {png_path}\n  - {pdf_path}")
     plt.show()
     plt.close()
+
+def plot_confusion_matrices(metrics_dict, output_dir,color_map="Oranges"):
+    """
+    Plots and saves confusion matrices from a best_metrics-style dict.
+    """
+    output_dir = os.path.join(output_dir, "confusion_plots")
+    os.makedirs(output_dir, exist_ok=True)
+    
+    tasks = {
+        "energy": ["MATTER", "MATTER-LBT"],
+        "alpha": ["0.2", "0.3", "0.4"],
+        "q0": ["1.0", "1.5", "2.0", "2.5"]
+    }
+
+    for task, labels in tasks.items():
+        cm = np.array(metrics_dict[task]["confusion_matrix"])
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+        fig, ax = plt.subplots(figsize=(6, 5))
+        disp.plot(cmap=color_map, ax=ax, values_format="d", colorbar=False)
+        set_confusion_matrix_title(task, ax)
+        # ax.set_title(f"{task.upper()} Confusion Matrix")
+        fig.tight_layout()
+
+        # Save
+        png_path = os.path.join(output_dir, f"confusion_matrix_{task}.png")
+        pdf_path = os.path.join(output_dir, f"confusion_matrix_{task}.pdf")
+        plt.savefig(png_path, dpi=300, bbox_inches='tight')
+        plt.savefig(pdf_path, bbox_inches='tight')
+        print(f"✅ Saved confusion matrix for {task}:\n - {png_path}\n - {pdf_path}")
+        plt.show()
+        plt.close()
+
+def set_confusion_matrix_title(task, ax):
+    if task == "energy":
+        title = "Energy Loss Module"
+    elif task == "alpha":
+        title = r"Strong Coupling ($\alpha_s$)"
+    elif task == "q0":
+        title = r"Virtuality Separation ($Q_0$)"
+    else:
+        title = f"{task} Confusion Matrix"
+
+    ax.set_title(f"{title} Confusion Matrix")
+
+
+def plot_colormap_list():
+    """
+    Plots a list of colormaps from matplotlib in various categories.
+    """
+    colormap_categories = {
+        "Perceptually Uniform Sequential": ['viridis', 'plasma', 'inferno', 'magma', 'cividis'],
+        "Sequential": ['Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
+                       'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
+                       'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn'],
+        "Diverging": ['PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic'],
+        "Qualitative": ['Pastel1', 'Pastel2', 'Paired', 'Accent', 'Dark2', 'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20b', 'tab20c'],
+        "Cyclic": ['twilight', 'twilight_shifted', 'hsv'],
+        "Miscellaneous": ['flag', 'prism', 'ocean', 'gist_earth', 'terrain', 'gist_stern',
+                          'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg',
+                          'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar']
+    }
+
+    gradient = np.linspace(0, 1, 256).reshape(1, -1)
+
+    for category, cmap_list in colormap_categories.items():
+        n = len(cmap_list)
+        fig, axes = plt.subplots(n, 1, figsize=(8, 0.4 * n))
+        fig.subplots_adjust(top=1, bottom=0, left=0, right=1)
+        fig.suptitle(category, fontsize=12, x=0.5, y=1.05)
+
+        if n == 1:
+            axes = [axes]
+
+        for ax, name in zip(axes, cmap_list):
+            ax.imshow(gradient, aspect='auto', cmap=plt.get_cmap(name))
+            ax.set_axis_off()
+            ax.set_title(name, fontsize=10, loc='left')
+
+        plt.show()
+
+plot_colormap_list()
 

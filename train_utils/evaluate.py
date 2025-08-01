@@ -1,6 +1,7 @@
 # train_utils/evaluate.py
 import torch
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score,confusion_matrix
+
 
 def evaluate(loader, model, criterion, device):
     model.eval()
@@ -70,7 +71,11 @@ def evaluate(loader, model, criterion, device):
     avg_loss_alpha = val_loss_alpha / len(loader)
     avg_loss_q0 = val_loss_q0 / len(loader)
     avg_val_loss = val_loss_total / len(loader)
-    
+
+    # cm_energy = confusion_matrix(y_true["energy"], y_pred["energy"])
+    # cm_alpha = confusion_matrix(y_true["alpha"], y_pred["alpha"])
+    # cm_q0 = confusion_matrix(y_true["q0"], y_pred["q0"])
+
     # All metrics + losses in one dict
     metrics = {
         "loss": avg_val_loss,
@@ -79,22 +84,29 @@ def evaluate(loader, model, criterion, device):
         "loss_q0": avg_loss_q0,
         "accuracy": acc_total,
         "energy": {
+            
             "accuracy": accuracy_score(y_true['energy'], y_pred['energy']),
             "precision": precision_score(y_true['energy'], y_pred['energy'], average='macro',zero_division=0),
             "recall": recall_score(y_true['energy'], y_pred['energy'], average='macro'),
             "f1": f1_score(y_true['energy'], y_pred['energy'], average='macro'),
+            "confusion_matrix": confusion_matrix(y_true["energy"], y_pred["energy"]).tolist(),
+            # "confusion_matrix": cm_energy.tolist()
         },
         "alpha": {
             "accuracy": accuracy_score(y_true['alpha'], y_pred['alpha']),
             "precision": precision_score(y_true['alpha'], y_pred['alpha'], average='macro',zero_division=0),
             "recall": recall_score(y_true['alpha'], y_pred['alpha'], average='macro'),
             "f1": f1_score(y_true['alpha'], y_pred['alpha'], average='macro'),
+            "confusion_matrix": confusion_matrix(y_true["alpha"], y_pred["alpha"]).tolist(),
+            # "confusion_matrix": cm_alpha.tolist()
         },
         "q0": {
             "accuracy": accuracy_score(y_true['q0'], y_pred['q0']),
             "precision": precision_score(y_true['q0'], y_pred['q0'], average='macro',zero_division=0),
             "recall": recall_score(y_true['q0'], y_pred['q0'], average='macro'),
             "f1": f1_score(y_true['q0'], y_pred['q0'], average='macro'),
+            "confusion_matrix": confusion_matrix(y_true["q0"], y_pred["q0"]).tolist(),
+            # "confusion_matrix": cm_q0.tolist()
         }
     }
 

@@ -48,3 +48,4 @@ def print_best_model_summary(best_epoch, best_acc, best_metrics):
         print(f"  Precision: {best_metrics[task]['precision']:.4f}")
         print(f"  Recall   : {best_metrics[task]['recall']:.4f}")
         print(f"  F1-Score : {best_metrics[task]['f1']:.4f}")
+        print(f"  Confusion Matrix:\n{best_metrics[task]['confusion_matrix']}")
