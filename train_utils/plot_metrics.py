@@ -180,5 +180,5 @@ def plot_colormap_list():
 
         plt.show()
 
-plot_colormap_list()
+# plot_colormap_list()
 

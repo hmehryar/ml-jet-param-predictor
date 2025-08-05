@@ -44,7 +44,6 @@ class MambaToViTClassifier(nn.Module):
         }
     
 
-from models.hybrid_mamba_vit import MambaToViTClassifier
 def create_model(backbone=['mambaout_base_plus_rw.sw_e150_in12k', 'vit_tiny_patch16_224'], 
                  input_shape=(1, 32, 32),
                  learning_rate=0.0001,
