@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=jet-mamba-vit-bs64
+#SBATCH --job-name=jet-mamba-vit-bs32-ep200
 
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1

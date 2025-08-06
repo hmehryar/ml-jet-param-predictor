@@ -30,12 +30,18 @@ class MambaToViTClassifier(nn.Module):
         self.head_q0    = nn.Linear(vit_embed_dim, output_dims[2])  # 4-class
 
     def forward(self, x):  # x shape: [B, 1, 32, 32]
+        print(f"input proj")
         x = self.input_proj(x)                 # [B, 3, 32, 32]
+        print(f"mamba")
         x = self.mamba(x)[-1]                  # [B, C, H, W]
 
         if x.ndim == 4:
+            print(f"flatten if [B, C, 1, 1]")
             x = x.view(x.size(0), -1)  # flatten if [B, C, 1, 1]
+        
+        print(f"reshape to image")
         x = self.reshape_to_image(x)   # [B, 3, 16, 16]
+        print(f"vit forward features")
         x = self.vit.forward_features(x)[:, 0]  # [B, D] ← CLS token
         return {
             "energy_loss_output": self.head_eloss(x),
