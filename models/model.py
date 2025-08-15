@@ -138,8 +138,10 @@ from models.model_mamba import MambaClassifier
 # ---------------------------
 # Model Creation Helper
 # ---------------------------
-def create_model(backbone='efficientnet', input_shape=(1, 32, 32),
-                learning_rate=0.001, d_model=512,
+def create_model(backbone='efficientnet',
+                input_shape=(1, 32, 32),
+                learning_rate=0.001, 
+                d_model=512,
                 init_weights='imagenet'):# 'imagenet', 'cifar', or 'gaussian'
     """
     Helper function to create and compile a MultiHeadClassifier.
@@ -174,18 +176,6 @@ def create_model(backbone='efficientnet', input_shape=(1, 32, 32),
     # Handle ViT Variants
     elif backbone.startswith('vit'):
         suffix = backbone[len('vit_'):]
-        # if suffix == 'augreg_in21k_ft_in1k':
-        #     model_name = 'vit_base_patch16_224.augreg_in21k_ft_in1k'
-        #     pretrained = True
-        # elif suffix == 'augreg_in21k':
-        #     model_name = 'vit_base_patch16_224.augreg_in21k'
-        #     pretrained = True
-        # elif suffix == 'gaussian':
-        #     model_name = 'vit_base_patch16_224'
-        #     pretrained = False
-        # elif suffix == '':
-        #     model_name = 'vit_base_patch16_224'
-        #     pretrained = False
         if suffix == 'augreg_in21k_ft_in1k':
             model_name = 'vit_tiny_patch16_224.augreg_in21k_ft_in1k'
             pretrained = True

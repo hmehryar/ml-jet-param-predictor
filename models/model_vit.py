@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import timm
 # from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
@@ -34,3 +35,33 @@ class ViTClassifier(nn.Module):
             'alpha_output': self.alpha_head(feats),
             'q0_output': self.q0_head(feats),
         }
+    
+from models.model import weights_init_normal
+def create_model(backbone="vit_gaussian", 
+                 input_shape=(1, 32, 32),
+                 learning_rate=0.0001,
+                 ):
+
+    if backbone.startswith('vit'):
+        suffix = backbone[len('vit_'):]
+        if suffix == 'augreg_in21k_ft_in1k':
+            model_name = 'vit_tiny_patch16_224.augreg_in21k_ft_in1k'
+            pretrained = True
+        elif suffix == 'augreg_in21k':
+            model_name = 'vit_tiny_patch16_224.augreg_in21k'
+            pretrained = True
+        elif suffix == 'gaussian':
+            model_name = 'vit_tiny_patch16_224'
+            pretrained = False
+        elif suffix == '':
+            model_name = 'vit_tiny_patch16_224'
+            pretrained = False
+        else:
+            raise ValueError(f"Unrecognized vit variant: '{suffix}'")
+
+        print(f"Using ViT model: {model_name}, pretrained: {pretrained}")
+        model = ViTClassifier(input_shape=input_shape, pretrained=pretrained, model_name=model_name)
+        if suffix == 'gaussian':
+            model.apply(weights_init_normal)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        return model, optimizer

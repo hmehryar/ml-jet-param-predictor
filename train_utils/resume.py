@@ -94,3 +94,28 @@ def fill_trackers_from_history(all_epoch_metrics,
         val_acc_alpha_list.append(record["val_alpha"]["accuracy"])
         val_acc_q0_list.append(record["val_q0"]["accuracy"])
         val_acc_list.append(record["val_acc"])
+
+def load_pretrained_model(model, device, config, strict=False):
+    """
+    Loads a pretrained model from config.preload_model_path if it exists.
+    Only loads model weights (no optimizer state).
+    """
+    preload_path = getattr(config, "preload_model_path", None)
+
+    if not preload_path:
+        print("[INFO] No preload_model_path specified — skipping preload.")
+        return model, False
+
+    if not os.path.exists(preload_path):
+        print(f"[WARN] preload_model_path specified but file not found: {preload_path}")
+        return model, False
+
+    print(f"[INFO] 🔄 Preloading model weights from {preload_path}")
+    checkpoint = torch.load(preload_path, map_location=device, weights_only=False)
+
+    # Accept raw state dict or wrapped dict
+    state_dict = checkpoint.get("model_state_dict", checkpoint) if isinstance(checkpoint, dict) else checkpoint
+    model.load_state_dict(state_dict, strict=strict)
+
+    print("[INFO] ✅ Pretrained weights loaded successfully.")
+    return model, True

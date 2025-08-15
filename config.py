@@ -86,8 +86,9 @@ def get_config(config_path=None):
         'verbose': True
     }
     scheduler=cfg_dict.get('scheduler', scheduler_defaults)
-
-
+    preload_model_path = cfg_dict.get("preload_model_path")
+    if preload_model_path:
+        preloaded="_preloaded"
     # --- Split CSV Paths based on group_size ---
     if group_size > 1 :
         basename     = f"file_labels_aggregated_ds{dataset_size}_g{group_size}"
@@ -98,7 +99,7 @@ def get_config(config_path=None):
     test_csv     = os.path.join(dataset_root_dir, f"{basename}_test.csv")
 
     scheduler_type = scheduler.get('type', 'NoScheduler')
-    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}"
+    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}{preloaded}"
     output_dir = os.path.join(output_base, run_tag)
 
     return SimpleNamespace(**{
@@ -117,7 +118,8 @@ def get_config(config_path=None):
         "output_dir": output_dir,
         "group_size": group_size,
         "scheduler": scheduler,
-        "dataset_size": dataset_size
+        "dataset_size": dataset_size,
+        "preload_model_path": preload_model_path
 
     })
 
