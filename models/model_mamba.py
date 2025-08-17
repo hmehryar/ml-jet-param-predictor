@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import timm
 # from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
@@ -43,9 +44,6 @@ class MambaClassifier(nn.Module):
             'q0_output': self.q0_head(feats),
         }
 
-# from mamba_ssm import Mamba  # Assuming `mamba-ssm` is installed for Mamba model
-import torch.nn.functional as F
-
 class MambaVisionMultiHead(nn.Module):
     
     def __init__(self, in_chans=1, img_size=32, embed_dim=128, mamba_layers=4, mamba_hidden=256):
@@ -74,3 +72,42 @@ class MambaVisionMultiHead(nn.Module):
             'alpha_output':  self.head_alpha(feat),
             'q0_output':     self.head_q0(feat)
         }
+    
+
+from models.model import weights_init_normal
+from models.model import MultiHeadClassifier
+def create_model(backbone="vit_gaussian", 
+                 input_shape=(1, 32, 32),
+                 learning_rate=0.0001,
+                 ):
+
+    if backbone.startswith('mambaout'):
+        suffix = backbone[len('mambaout_'):]
+
+        if suffix == 'base_plus_rw.sw_e150_in12k_ft_in1k':
+            model_name = 'mambaout_base_plus_rw.sw_e150_in12k_ft_in1k'
+            pretrained = True
+        elif suffix == 'base_plus_rw.sw_e150_in12k':
+            model_name = 'mambaout_base_plus_rw.sw_e150_in12k'
+            pretrained = True
+        elif suffix == 'base_plus_rw_gaussian':
+            model_name = 'mambaout_base_plus_rw'
+            pretrained = False
+        elif suffix == 'base_plus_rw':
+            model_name = 'mambaout_base_plus_rw'
+            pretrained = False
+        else:
+            raise ValueError(f"Unrecognized mamba variant: '{suffix}'")
+
+        print(f"Using Mamba model: {model_name}, pretrained: {pretrained}")
+        model = MambaClassifier(input_shape=input_shape, pretrained=pretrained, model_name=model_name)
+        if suffix == 'gaussian':
+            model.apply(weights_init_normal)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        return model, optimizer
+    else:
+        model = MultiHeadClassifier(backbone=backbone, input_shape=input_shape)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    return model, optimizer
