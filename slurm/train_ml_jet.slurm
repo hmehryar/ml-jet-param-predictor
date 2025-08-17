@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=mamba-p-bs32-ep50-lr1e-04-ds1008
+#SBATCH --job-name=mamba-bs16-ep50-lre04-ds7.2M
 
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
