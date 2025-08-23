@@ -1,7 +1,7 @@
 # train_utils/evaluate.py
 import torch
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score,confusion_matrix
-
+import os
 
 # def evaluate(loader, model, criterion, device):
 #     model.eval()
@@ -112,10 +112,18 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 #     return metrics
 
-def evaluate(loader, model, criterion, device,*, make_alpha_fig=False, alpha_fig_path=None, alpha_class_names=("0.2","0.3","0.4")):
+
+
+def evaluate(loader, model, criterion, device,*,
+              make_alpha_fig=False, alpha_fig_path=None, alpha_class_names=("0.2","0.3","0.4"),
+              make_alpha_avgprob_fig=False, alpha_avgprob_fig_path=None):
     model.eval()
     y_true = {'energy': [], 'alpha': [], 'q0': []}
     y_pred = {'energy': [], 'alpha': [], 'q0': []}
+    
+    # NEW: collect α_s probabilities so we can pass to the prob-hist method
+    alpha_proba_rows = []   # will become [N, C] numpy
+
     correct_all = 0
     total = 0
 
@@ -136,8 +144,12 @@ def evaluate(loader, model, criterion, device,*, make_alpha_fig=False, alpha_fig
             # pred_energy = (outputs['energy_loss_output'] > 0.5).long().squeeze()
             energy_logits = outputs['energy_loss_output'].squeeze()
             pred_energy = (torch.sigmoid(energy_logits) > 0.5).long()
-            
-            pred_alpha = torch.argmax(outputs['alpha_output'], dim=1)
+
+            alpha_logits = outputs['alpha_output']
+            pred_alpha = torch.argmax(alpha_logits, dim=1)
+            alpha_proba = torch.softmax(alpha_logits, dim=1)
+            alpha_proba_rows.append(alpha_proba.cpu().numpy())
+
             pred_q0 = torch.argmax(outputs['q0_output'], dim=1)
 
             gt_energy = labels['energy_loss_output'].squeeze()
@@ -173,7 +185,12 @@ def evaluate(loader, model, criterion, device,*, make_alpha_fig=False, alpha_fig
             val_loss_q0 += loss_q0.item()
             val_loss_total += (loss_energy + loss_alpha + loss_q0).item()
 
-            
+    # Aggregate α_s probabilities (N, C)
+    if len(alpha_proba_rows):
+        y_alpha_proba = np.concatenate(alpha_proba_rows, axis=0)
+    else:
+        y_alpha_proba = np.zeros((0, len(alpha_class_names)), dtype=float)
+
     # Compute individual accuracies
     acc_total = correct_all / total
     avg_loss_energy = val_loss_energy / len(loader)
@@ -216,148 +233,42 @@ def evaluate(loader, model, criterion, device,*, make_alpha_fig=False, alpha_fig
             "f1": f1_score(y_true['q0'], y_pred['q0'], average='macro'),
             "confusion_matrix": confusion_matrix(y_true["q0"], y_pred["q0"]).tolist(),
             # "confusion_matrix": cm_q0.tolist()
+        },
+        # expose α_s soft info so notebooks can reuse without re-running evaluation
+        "alpha_soft": {
+            "y_true_alpha": np.asarray(y_true['alpha']).tolist(),
+            "y_alpha_proba": y_alpha_proba.tolist(),
+            "class_names": list(alpha_class_names),
         }
     }
     # --- NEW: optionally create α_s-focused figure here ---
     if make_alpha_fig:
-        # If the caller gave a directory, make a default filename:
-        if alpha_fig_path is not None and alpha_fig_path.endswith(os.sep):
-            alpha_fig_path = os.path.join(alpha_fig_path, "alpha_hist_per_true_bin.png")
-
+        
         plot_alpha_histograms(
             y_true_alpha=y_true['alpha'],
             y_pred_alpha=y_pred['alpha'],
-            class_names=alpha_class_names,
+            class_names=[rf"$\alpha_s={c}$" for c in alpha_class_names],
             save_path=alpha_fig_path,
             show=False  # toggle True in notebooks if you want it displayed immediately
         )
+
+    if make_alpha_avgprob_fig:
         metrics["alpha_hist_path"] = alpha_fig_path  # report where it was saved (if any)
-    
-
-    # # --- NEW: optionally create α_s-focused figure here ---
-    # if make_alpha_fig:
-    #     # If the caller gave a directory, make a default filename:
-    #     if alpha_fig_path is not None and alpha_fig_path.endswith(os.sep):
-    #         alpha_fig_path = os.path.join(alpha_fig_path, "alpha_hist_per_true_bin.png")
-
-    #     plot_alpha_histograms_from_arrays(
-    #         y_true_alpha=y_true['alpha'],
-    #         y_pred_alpha=y_pred['alpha'],
-    #         class_names=alpha_class_names,
-    #         save_path=alpha_fig_path,
-    #         show=False  # toggle True in notebooks if you want it displayed immediately
-    #     )
-    #     metrics["alpha_hist_path"] = alpha_fig_path  # report where it was saved (if any)
+        plot_alpha_avgprob_histograms(
+            y_true_alpha=y_true['alpha'],
+            y_alpha_proba=y_alpha_proba,
+            class_names=[rf"$\alpha_s={c}$" for c in alpha_class_names],
+            save_path=alpha_avgprob_fig_path,
+            show=False
+        )
+        metrics["alpha_avgprob_hist_path"] = (alpha_avgprob_fig_path + ".png") if alpha_avgprob_fig_path else None
 
     return metrics
 
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-# --- NEW: α_s histogram plotter ---
-def plot_alpha_histograms_from_arrays(
-    y_true_alpha,
-    y_pred_alpha,
-    class_names=("0.2", "0.3", "0.4"),
-    figsize=(12, 3.8),
-    suptitle="Predicted αₛ distribution per true αₛ bin",
-    save_path=None,
-    show=False,
-):
-    """
-    Make 3 bar charts (one per true αₛ class). Each chart shows how the model's
-    αₛ predictions are distributed for that true bin.
+# ---------------------------
+# α_s helpers (probabilities)
+# ---------------------------
 
-    Args:
-        y_true_alpha (array-like, shape [N]): ground-truth αₛ class indices {0,1,2}
-        y_pred_alpha (array-like, shape [N]): predicted αₛ class indices {0,1,2}
-        class_names (tuple[str]): display names for classes in index order
-        figsize (tuple): figure size
-        suptitle (str): figure title
-        save_path (str|None): if set, saves PNG to this path (creates dirs)
-        show (bool): if True, plt.show() (useful in notebooks)
-    Returns:
-        fig (matplotlib.figure.Figure): the created figure (also saved if save_path)
-    """
-    y_true_alpha = np.asarray(y_true_alpha)
-    y_pred_alpha = np.asarray(y_pred_alpha)
-    num_classes = len(class_names)
-
-    # counts[true_class, pred_class] = number of samples
-    counts = np.zeros((num_classes, num_classes), dtype=int)
-    for t, p in zip(y_true_alpha, y_pred_alpha):
-        counts[int(t), int(p)] += 1
-
-    fig, axes = plt.subplots(1, num_classes, figsize=figsize, sharey=True)
-    if num_classes == 1:
-        axes = [axes]
-
-    x = np.arange(num_classes)
-    for t in range(num_classes):
-        ax = axes[t]
-        ax.bar(x, counts[t], edgecolor="black")
-        ax.set_xticks(x, class_names, rotation=0)
-        ax.set_xlabel("Predicted αₛ")
-        if t == 0:
-            ax.set_ylabel("# of predictions")
-        ax.set_title(f"True αₛ = {class_names[t]}\n(N={counts[t].sum()})")
-        # annotate counts on top of bars
-        for xi, c in zip(x, counts[t]):
-            ax.text(xi, c, str(int(c)), ha="center", va="bottom", fontsize=9)
-
-        ax.grid(axis="y", linestyle="--", alpha=0.3)
-
-    fig.suptitle(suptitle, y=1.05, fontsize=12)
-    fig.tight_layout()
-
-    if save_path is not None:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
-
-    if show:
-        plt.show()
-
-    return fig
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-# def plot_alpha_histograms(y_true_alpha, y_pred_alpha, class_names=[r"$\alpha_s=0.2$", r"$\alpha_s=0.3$", r"$\alpha_s=0.4$"]):
-#     """
-#     Plot normalized histograms of predicted alpha_s values for each true alpha_s class.
-#     Each histogram is normalized (sum=1), but also shows raw bin counts as annotations.
-#     """
-
-#     y_true_alpha = np.array(y_true_alpha)
-#     y_pred_alpha = np.array(y_pred_alpha)
-#     num_classes = len(class_names)
-
-#     fig, axes = plt.subplots(1, num_classes, figsize=(15, 4), sharey=True)
-
-#     for i, ax in enumerate(axes):
-#         # Select predictions where ground truth == i
-#         mask = (y_true_alpha == i)
-#         preds = y_pred_alpha[mask]
-
-#         # Count raw occurrences
-#         counts, bins = np.histogram(preds, bins=np.arange(num_classes+1)-0.5)
-#         total = counts.sum()
-
-#         # Normalize counts (avoid div/0)
-#         normalized = counts / total if total > 0 else counts
-
-#         # Plot normalized histogram
-#         ax.bar(range(num_classes), normalized, tick_label=class_names, alpha=0.7, color='C0', edgecolor='black')
-
-#         # Add annotations with raw counts
-#         for j, c in enumerate(counts):
-#             ax.text(j, normalized[j] + 0.01, str(c), ha='center', va='bottom', fontsize=9)
-
-#         ax.set_title(f"True {class_names[i]} (N={total})")
-#         ax.set_ylabel("Normalized Frequency")
-
-#     plt.tight_layout()
-#     plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -373,13 +284,23 @@ def plot_alpha_histograms(
     """
     Plot normalized histograms of predicted alpha_s values for each true alpha_s class.
     Bars are normalized (sum=1) but annotated with raw count and probability.
+    Args:
+        y_true_alpha (array-like, shape [N]): ground-truth αₛ class indices {0,1,2}
+        y_pred_alpha (array-like, shape [N]): predicted αₛ class indices {0,1,2}
+        class_names (tuple[str]): display names for classes in index order
+        figsize (tuple): figure size
+        suptitle (str): figure title
+        save_path (str|None): if set, saves PNG to this path (creates dirs)
+        show (bool): if True, plt.show() (useful in notebooks)
+    Returns:
+        fig (matplotlib.figure.Figure): the created figure (also saved if save_path)
     """
 
     y_true_alpha = np.array(y_true_alpha)
     y_pred_alpha = np.array(y_pred_alpha)
     num_classes = len(class_names)
 
-    fig, axes = plt.subplots(1, num_classes, figsize=figsize, sharey=True)
+    fig, axes = plt.subplots(1, num_classes, figsize=figsize, sharey=True,constrained_layout=True)
 
     for i, ax in enumerate(axes):
         # Select predictions where ground truth == i
@@ -399,8 +320,10 @@ def plot_alpha_histograms(
 
         # Add annotations with raw counts + probability
         for j, (c, p) in enumerate(zip(counts, probs)):
-            ax.text(j, p + 0.01, f"{c} ({p:.2f})",
-                    ha='center', va='bottom', fontsize=9)
+            ax.text(j, p + 0.02, f"{c} ({p:.2f})",
+                    ha='center', va='bottom', fontsize=10, clip_on=False)
+        
+        ax.grid(axis="y", linestyle="--", alpha=0.3)
 
         ax.set_title(f"True {class_names[i]} (N={total})")
         ax.set_ylabel("Normalized Frequency")
@@ -408,12 +331,80 @@ def plot_alpha_histograms(
     fig.suptitle(suptitle, y=1.05, fontsize=12)
     fig.tight_layout()
 
-    if save_path is not None:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        fig.savefig(save_path, dpi=200, bbox_inches="tight")
 
+    if save_path is not None:
+        base = os.path.splitext(save_path)[0]  # allow ".png" or path without ext
+        os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
+        fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
+        fig.savefig(base + ".pdf", bbox_inches="tight")
     if show:
         plt.tight_layout()
         plt.show()
 
+    return fig
+
+
+
+def plot_alpha_avgprob_histograms(
+    y_true_alpha,
+    y_alpha_proba,                        # shape (N, C), softmax probs per sample
+    class_names=(r"$\alpha_s=0.2$", r"$\alpha_s=0.3$", r"$\alpha_s=0.4$"),
+    figsize=(17, 5.5),
+    suptitle=r"Average predicted $\alpha_s$ probability per true $\alpha_s$",
+    save_path=None,
+    show=False,
+):
+    """
+    For each TRUE α_s class t, compute the mean predicted probability vector over all its samples:
+        avg_probs[t] = mean( y_alpha_proba[ y_true_alpha == t ] , axis=0 )
+    Then plot 3 bar charts (one per true α_s), bars = average probs for predicted classes.
+    """
+    y_true_alpha = np.asarray(y_true_alpha, dtype=int)
+    y_alpha_proba = np.asarray(y_alpha_proba, dtype=float)
+    C = len(class_names)
+
+    # compute avg probs per true class
+    avg_probs = np.zeros((C, C), dtype=float)
+    Ns = np.zeros(C, dtype=int)
+    for t in range(C):
+        mask = (y_true_alpha == t)
+        Ns[t] = int(mask.sum())
+        if Ns[t] > 0:
+            avg_probs[t] = y_alpha_proba[mask].mean(axis=0)
+
+    # figure
+    fig, axes = plt.subplots(1, C, figsize=figsize, sharey=True, constrained_layout=True)
+    if C == 1:
+        axes = [axes]
+    x = np.arange(C)
+
+    # global headroom to avoid label clipping
+    ymax = float(np.max(avg_probs)) if avg_probs.size else 1.0
+    ylim_top = max(0.05, min(1.05, ymax + 0.12))
+
+    for t, ax in enumerate(axes):
+        bars = ax.bar(x, avg_probs[t], edgecolor="black", alpha=0.85, tick_label=class_names)
+        ax.set_ylim(0, ylim_top)
+        ax.set_title(f"True {class_names[t]} (N={Ns[t]})")
+        if t == 0:
+            ax.set_ylabel("Average probability")
+
+        # annotate value on each bar
+        for j, b in enumerate(bars):
+            h = b.get_height()
+            ax.text(b.get_x()+b.get_width()/2, h + 0.02, f"{h:.3f}",
+                    ha="center", va="bottom", fontsize=10, clip_on=False)
+
+        ax.grid(axis="y", linestyle="--", alpha=0.3)
+
+    fig.suptitle(suptitle, y=1.05, fontsize=12)
+
+    if save_path:
+        base = os.path.splitext(save_path)[0]  # allow ".png" or path without ext
+        os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
+        fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
+        fig.savefig(base + ".pdf", bbox_inches="tight")
+
+    if show:
+        plt.show()
     return fig

@@ -16,4 +16,5 @@ scheduler:
   factor: 0.5
   patience: 4
   verbose: true
-preload_model_path: "training_output/ViT_tiny_patch16_224_gaussian_g500_bs32_ep50_lr1e-04_ds7200000_g500_sched_ReduceLROnPlateau/best_model.pth"
+preload_model_path: "experiments/exp_preload_trained_model_and_train_more/training_output/ViT_tiny_patch16_224_gaussian_lrp_12_rlrp_4_bs32_ep50_lr1e-04_ds7200000_g500_sched_ReduceLROnPlateau_preloaded/best_model.pth"
+
