@@ -116,13 +116,17 @@ import os
 
 def evaluate(loader, model, criterion, device,*,
               make_alpha_fig=False, alpha_fig_path=None, alpha_class_names=("0.2","0.3","0.4"),
-              make_alpha_avgprob_fig=False, alpha_avgprob_fig_path=None):
+              make_alpha_avgprob_fig=False, alpha_avgprob_fig_path=None,
+              make_q0_avgprob_fig=False, q0_avgprob_fig_path=None, q0_class_names=("1.0","1.5","2.0","2.5")):
     model.eval()
     y_true = {'energy': [], 'alpha': [], 'q0': []}
     y_pred = {'energy': [], 'alpha': [], 'q0': []}
     
     # NEW: collect α_s probabilities so we can pass to the prob-hist method
     alpha_proba_rows = []   # will become [N, C] numpy
+
+    # NEW: collect Q0 probabilities (softmax) to build avg-prob plots
+    q0_proba_rows = []     # will become [N, 4] numpy
 
     correct_all = 0
     total = 0
@@ -150,7 +154,11 @@ def evaluate(loader, model, criterion, device,*,
             alpha_proba = torch.softmax(alpha_logits, dim=1)
             alpha_proba_rows.append(alpha_proba.cpu().numpy())
 
-            pred_q0 = torch.argmax(outputs['q0_output'], dim=1)
+            # pred_q0 = torch.argmax(outputs['q0_output'], dim=1)
+            q0_logits = outputs['q0_output']
+            pred_q0=torch.argmax(q0_logits,dim=1)
+            q0_proba=torch.softmax(q0_logits,dim=1)
+            q0_proba_rows.append(q0_proba.cpu().numpy())
 
             gt_energy = labels['energy_loss_output'].squeeze()
             gt_alpha = labels['alpha_output'].squeeze()
@@ -190,6 +198,12 @@ def evaluate(loader, model, criterion, device,*,
         y_alpha_proba = np.concatenate(alpha_proba_rows, axis=0)
     else:
         y_alpha_proba = np.zeros((0, len(alpha_class_names)), dtype=float)
+
+    # Aggregate Q0 probabilities (N, C)
+    if len(q0_proba_rows):
+        y_q0_proba = np.concatenate(q0_proba_rows, axis=0)
+    else:
+        y_q0_proba = np.zeros((0, len(q0_class_names)), dtype=float)
 
     # Compute individual accuracies
     acc_total = correct_all / total
@@ -239,6 +253,12 @@ def evaluate(loader, model, criterion, device,*,
             "y_true_alpha": np.asarray(y_true['alpha']).tolist(),
             "y_alpha_proba": y_alpha_proba.tolist(),
             "class_names": list(alpha_class_names),
+        },
+        # expose q_0 soft info so notebooks can reuse without re-running evaluation
+        "q0_soft": {
+            "y_true_q0": np.asarray(y_true['q0']).tolist(),
+            "y_q0_proba": y_q0_proba.tolist(),
+            "class_names": list(q0_class_names),
         }
     }
     # --- NEW: optionally create α_s-focused figure here ---
@@ -262,6 +282,15 @@ def evaluate(loader, model, criterion, device,*,
             show=False
         )
         metrics["alpha_avgprob_hist_path"] = (alpha_avgprob_fig_path + ".png") if alpha_avgprob_fig_path else None
+    if make_q0_avgprob_fig:
+        plot_q0_avgprob_histograms(
+            y_true_q0=y_true['q0'],
+            y_q0_proba=y_q0_proba,
+            class_names=[rf"$Q_0={c}$" for c in q0_class_names],
+            save_path=q0_avgprob_fig_path,
+            show=False
+        )
+        metrics["q0_avgprob_hist_path"] = (q0_avgprob_fig_path + ".png") if q0_avgprob_fig_path else None
 
     return metrics
 
@@ -342,9 +371,6 @@ def plot_alpha_histograms(
         plt.show()
 
     return fig
-
-
-
 def plot_alpha_avgprob_histograms(
     y_true_alpha,
     y_alpha_proba,                        # shape (N, C), softmax probs per sample
@@ -401,6 +427,70 @@ def plot_alpha_avgprob_histograms(
 
     if save_path:
         base = os.path.splitext(save_path)[0]  # allow ".png" or path without ext
+        os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
+        fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
+        fig.savefig(base + ".pdf", bbox_inches="tight")
+
+    if show:
+        plt.show()
+    return fig
+
+
+# Plot Q0 average probability histograms
+def plot_q0_avgprob_histograms(
+    y_true_q0,
+    y_q0_proba,                        # shape (N, 4), softmax probs per sample
+    class_names=(r"$Q_0=1.0$", r"$Q_0=1.5$", r"$Q_0=2.0$", r"$Q_0=2.5$"),
+    figsize=(21, 5.5),
+    suptitle=r"Average predicted $Q_0$ probability per true $Q_0$",
+    save_path=None,
+    show=False,
+):
+    """
+    For each TRUE Q0 class t, compute the mean predicted probability vector over all its samples:
+        avg_probs[t] = mean( y_q0_proba[ y_true_q0 == t ] , axis=0 )
+    Then plot 4 bar charts (one per true Q0), bars = average probs for predicted classes.
+    """
+    y_true_q0 = np.asarray(y_true_q0, dtype=int)
+    y_q0_proba = np.asarray(y_q0_proba, dtype=float)
+    C = len(class_names)
+
+    # compute avg probs per true class
+    avg_probs = np.zeros((C, C), dtype=float)
+    Ns = np.zeros(C, dtype=int)
+    for t in range(C):
+        mask = (y_true_q0 == t)
+        Ns[t] = int(mask.sum())
+        if Ns[t] > 0:
+            avg_probs[t] = y_q0_proba[mask].mean(axis=0)
+
+    # figure
+    fig, axes = plt.subplots(1, C, figsize=figsize, sharey=True, constrained_layout=True)
+    if C == 1:
+        axes = [axes]
+    x = np.arange(C)
+
+    ymax = float(np.max(avg_probs)) if avg_probs.size else 1.0
+    ylim_top = max(0.05, min(1.05, ymax + 0.12))
+
+    for t, ax in enumerate(axes):
+        bars = ax.bar(x, avg_probs[t], edgecolor="black", alpha=0.85, tick_label=class_names)
+        ax.set_ylim(0, ylim_top)
+        ax.set_title(f"True {class_names[t]} (N={Ns[t]})")
+        if t == 0:
+            ax.set_ylabel("Average probability")
+
+        for j, b in enumerate(bars):
+            h = b.get_height()
+            ax.text(b.get_x()+b.get_width()/2, h + 0.02, f"{h:.3f}",
+                    ha="center", va="bottom", fontsize=10, clip_on=False)
+
+        ax.grid(axis="y", linestyle="--", alpha=0.3)
+
+    fig.suptitle(suptitle, y=1.05, fontsize=12)
+
+    if save_path:
+        base = os.path.splitext(save_path)[0]
         os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
         fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
         fig.savefig(base + ".pdf", bbox_inches="tight")

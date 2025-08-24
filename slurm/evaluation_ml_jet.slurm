@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=eval-vit-alpha-s-ep50-lre04-ds7.2M
+#SBATCH --job-name=eval-vit-q-0-ep50-lre04-ds7.2M
 
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
