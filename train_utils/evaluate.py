@@ -114,7 +114,7 @@ import os
 
 
 
-def evaluate(loader, model, criterion, device,*,
+def evaluate(loader, model, criterion, device, loss_weights=None,*,
               make_alpha_fig=False, alpha_fig_path=None, alpha_class_names=("0.2","0.3","0.4"),
               make_alpha_avgprob_fig=False, alpha_avgprob_fig_path=None,
               make_q0_avgprob_fig=False, q0_avgprob_fig_path=None, q0_class_names=("1.0","1.5","2.0","2.5")):
@@ -135,6 +135,11 @@ def evaluate(loader, model, criterion, device,*,
     val_loss_energy = 0.0
     val_loss_alpha = 0.0
     val_loss_q0 = 0.0
+
+    loss_weights = loss_weights or {}
+    w_energy = float(loss_weights.get("energy_loss_output", 1.0))
+    w_alpha  = float(loss_weights.get("alpha_output", 1.0))
+    w_q0     = float(loss_weights.get("q0_output", 1.0))
 
     with torch.no_grad():
         for x, labels in loader:
@@ -188,10 +193,15 @@ def evaluate(loader, model, criterion, device,*,
             loss_alpha = criterion['alpha_output'](alpha_out, gt_alpha)
             loss_q0 = criterion['q0_output'](q0_out, gt_q0)
 
+            total_batch_loss = (w_energy * loss_energy
+                                + w_alpha  * loss_alpha
+                                + w_q0     * loss_q0)
+            
             val_loss_energy += loss_energy.item()
             val_loss_alpha += loss_alpha.item()
             val_loss_q0 += loss_q0.item()
-            val_loss_total += (loss_energy + loss_alpha + loss_q0).item()
+            # val_loss_total += (loss_energy + loss_alpha + loss_q0).item()
+            val_loss_total += total_batch_loss.item()
 
     # Aggregate α_s probabilities (N, C)
     if len(alpha_proba_rows):

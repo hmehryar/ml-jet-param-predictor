@@ -89,6 +89,17 @@ def get_config(config_path=None):
     preload_model_path = cfg_dict.get("preload_model_path")
     if preload_model_path:
         preloaded="_preloaded"
+
+    # after scheduler / preload_model_path parsing
+    loss_cfg = cfg_dict.get("loss", {}) or {}
+    loss_weights = (loss_cfg.get("weights") or {
+        "energy_loss_output": 1.0,
+        "alpha_output": 1.0,
+        "q0_output": 1.0,
+    })
+    if not (loss_cfg.get("weights") is None):
+        # concatenate loss weights into a string and separate them with __annotations__
+        weighted_loss="_weighted_loss{}".format("_".join([f"{k}_{v}" for k, v in loss_weights.items()]))
     # --- Split CSV Paths based on group_size ---
     if group_size > 1 :
         basename     = f"file_labels_aggregated_ds{dataset_size}_g{group_size}"
@@ -99,7 +110,7 @@ def get_config(config_path=None):
     test_csv     = os.path.join(dataset_root_dir, f"{basename}_test.csv")
 
     scheduler_type = scheduler.get('type', 'NoScheduler')
-    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}{preloaded}"
+    run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}{preloaded}{weighted_loss}"
     output_dir = os.path.join(output_base, run_tag)
 
     return SimpleNamespace(**{
@@ -119,7 +130,8 @@ def get_config(config_path=None):
         "group_size": group_size,
         "scheduler": scheduler,
         "dataset_size": dataset_size,
-        "preload_model_path": preload_model_path
+        "preload_model_path": preload_model_path,
+        "loss_weights": loss_weights,
 
     })
 

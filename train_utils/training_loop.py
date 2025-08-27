@@ -30,7 +30,8 @@ def run_training_loop(cfg,train_loader,val_loader,
     for epoch in range(start_epoch, cfg.epochs):
         print(f"[INFO] Epoch {epoch+1}/{cfg.epochs}")
         train_metrics={}
-        train_metrics = train_one_epoch(train_loader, model, criterion, optimizer, device)
+        train_metrics = train_one_epoch(train_loader, model, criterion, optimizer, device,
+                                        loss_weights=cfg.loss_weights)
         (train_loss_list,
         train_loss_energy_list,
         train_loss_alpha_list,
@@ -50,7 +51,8 @@ def run_training_loop(cfg,train_loader,val_loader,
             train_acc_alpha_list,
             train_acc_q0_list
         )
-        val_metrics = evaluate(val_loader, model, criterion, device)
+        # ensure evaluate() computes weighted total loss with same weights
+        val_metrics = evaluate(val_loader, model, criterion, device, loss_weights=cfg.loss_weights)
         (val_loss_list,
         val_loss_energy_list,
         val_loss_alpha_list,
