@@ -6,7 +6,7 @@ learning_rate: 0.0001
 patience: 60
 input_shape: [1, 32, 32]
 global_max: 121.79151153564453
-output_dir: experiments/exp_preload_trained_model_and_train_more/training_output/
+output_dir: experiments/exp_adding_loss_weights_for_q0_emphasis/training_output/
 dataset_subdir: jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_7200000_balanced_unshuffled
 group_size: 500
 dataset_size: 1008

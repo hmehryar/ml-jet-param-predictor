@@ -2,6 +2,7 @@
 import torch
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score,confusion_matrix
 import os
+import numpy as np
 
 # def evaluate(loader, model, criterion, device):
 #     model.eval()
@@ -113,6 +114,8 @@ import os
 #     return metrics
 
 
+from train_utils.prob_utils import collect_head_probs, plot_prob_heatmap, save_probs_csv
+from train_utils.prob_utils import plot_alpha_histograms, plot_alpha_avgprob_histograms, plot_q0_avgprob_histograms
 
 def evaluate(loader, model, criterion, device, loss_weights=None,*,
               make_alpha_fig=False, alpha_fig_path=None, alpha_class_names=("0.2","0.3","0.4"),
@@ -156,14 +159,14 @@ def evaluate(loader, model, criterion, device, loss_weights=None,*,
 
             alpha_logits = outputs['alpha_output']
             pred_alpha = torch.argmax(alpha_logits, dim=1)
-            alpha_proba = torch.softmax(alpha_logits, dim=1)
-            alpha_proba_rows.append(alpha_proba.cpu().numpy())
+            # alpha_proba = torch.softmax(alpha_logits, dim=1)
+            # alpha_proba_rows.append(alpha_proba.cpu().numpy())
 
             # pred_q0 = torch.argmax(outputs['q0_output'], dim=1)
             q0_logits = outputs['q0_output']
             pred_q0=torch.argmax(q0_logits,dim=1)
-            q0_proba=torch.softmax(q0_logits,dim=1)
-            q0_proba_rows.append(q0_proba.cpu().numpy())
+            # q0_proba=torch.softmax(q0_logits,dim=1)
+            # q0_proba_rows.append(q0_proba.cpu().numpy())
 
             gt_energy = labels['energy_loss_output'].squeeze()
             gt_alpha = labels['alpha_output'].squeeze()
@@ -203,17 +206,19 @@ def evaluate(loader, model, criterion, device, loss_weights=None,*,
             # val_loss_total += (loss_energy + loss_alpha + loss_q0).item()
             val_loss_total += total_batch_loss.item()
 
-    # Aggregate α_s probabilities (N, C)
-    if len(alpha_proba_rows):
-        y_alpha_proba = np.concatenate(alpha_proba_rows, axis=0)
-    else:
-        y_alpha_proba = np.zeros((0, len(alpha_class_names)), dtype=float)
+    # # Aggregate α_s probabilities (N, C)
+    # if len(alpha_proba_rows):
+    #     y_alpha_proba = np.concatenate(alpha_proba_rows, axis=0)
+    # else:
+    #     y_alpha_proba = np.zeros((0, len(alpha_class_names)), dtype=float)
 
-    # Aggregate Q0 probabilities (N, C)
-    if len(q0_proba_rows):
-        y_q0_proba = np.concatenate(q0_proba_rows, axis=0)
-    else:
-        y_q0_proba = np.zeros((0, len(q0_class_names)), dtype=float)
+    # # Aggregate Q0 probabilities (N, C)
+    # if len(q0_proba_rows):
+    #     y_q0_proba = np.concatenate(q0_proba_rows, axis=0)
+    # else:
+    #     y_q0_proba = np.zeros((0, len(q0_class_names)), dtype=float)
+
+
 
     # Compute individual accuracies
     acc_total = correct_all / total
@@ -237,43 +242,67 @@ def evaluate(loader, model, criterion, device, loss_weights=None,*,
             
             "accuracy": accuracy_score(y_true['energy'], y_pred['energy']),
             "precision": precision_score(y_true['energy'], y_pred['energy'], average='macro',zero_division=0),
-            "recall": recall_score(y_true['energy'], y_pred['energy'], average='macro'),
-            "f1": f1_score(y_true['energy'], y_pred['energy'], average='macro'),
+            "recall": recall_score(y_true['energy'], y_pred['energy'], average='macro',zero_division=0),
+            "f1": f1_score(y_true['energy'], y_pred['energy'], average='macro',zero_division=0),
             "confusion_matrix": confusion_matrix(y_true["energy"], y_pred["energy"]).tolist(),
             # "confusion_matrix": cm_energy.tolist()
         },
         "alpha": {
             "accuracy": accuracy_score(y_true['alpha'], y_pred['alpha']),
             "precision": precision_score(y_true['alpha'], y_pred['alpha'], average='macro',zero_division=0),
-            "recall": recall_score(y_true['alpha'], y_pred['alpha'], average='macro'),
-            "f1": f1_score(y_true['alpha'], y_pred['alpha'], average='macro'),
+            "recall": recall_score(y_true['alpha'], y_pred['alpha'], average='macro',zero_division=0),
+            "f1": f1_score(y_true['alpha'], y_pred['alpha'], average='macro',zero_division=0),
             "confusion_matrix": confusion_matrix(y_true["alpha"], y_pred["alpha"]).tolist(),
             # "confusion_matrix": cm_alpha.tolist()
         },
         "q0": {
             "accuracy": accuracy_score(y_true['q0'], y_pred['q0']),
             "precision": precision_score(y_true['q0'], y_pred['q0'], average='macro',zero_division=0),
-            "recall": recall_score(y_true['q0'], y_pred['q0'], average='macro'),
-            "f1": f1_score(y_true['q0'], y_pred['q0'], average='macro'),
+            "recall": recall_score(y_true['q0'], y_pred['q0'], average='macro',zero_division=0),
+            "f1": f1_score(y_true['q0'], y_pred['q0'], average='macro',zero_division=0),
             "confusion_matrix": confusion_matrix(y_true["q0"], y_pred["q0"]).tolist(),
             # "confusion_matrix": cm_q0.tolist()
         },
-        # expose α_s soft info so notebooks can reuse without re-running evaluation
-        "alpha_soft": {
-            "y_true_alpha": np.asarray(y_true['alpha']).tolist(),
-            "y_alpha_proba": y_alpha_proba.tolist(),
-            "class_names": list(alpha_class_names),
-        },
-        # expose q_0 soft info so notebooks can reuse without re-running evaluation
-        "q0_soft": {
-            "y_true_q0": np.asarray(y_true['q0']).tolist(),
-            "y_q0_proba": y_q0_proba.tolist(),
-            "class_names": list(q0_class_names),
-        }
+        # # expose α_s soft info so notebooks can reuse without re-running evaluation
+        # "alpha_soft": {
+        #     "y_true_alpha": np.asarray(y_true['alpha']).tolist(),
+        #     "y_alpha_proba": y_alpha_proba.tolist(),
+        #     "class_names": list(alpha_class_names),
+        # },
+        # # expose q_0 soft info so notebooks can reuse without re-running evaluation
+        # "q0_soft": {
+        #     "y_true_q0": np.asarray(y_true['q0']).tolist(),
+        #     "y_q0_proba": y_q0_proba.tolist(),
+        #     "class_names": list(q0_class_names),
+        # }
     }
+    
+    # Collect softmax probability tables only if needed (avoids extra pass otherwise)
+    need_soft = make_alpha_avgprob_fig or make_q0_avgprob_fig
+    if need_soft:
+        (alpha_probs_soft, alpha_true_soft), (q0_probs_soft, q0_true_soft) = collect_head_probs(
+            loader, model, device, alpha_key="alpha_output", q0_key="q0_output"
+        )
+        alpha_csv_path =save_probs_csv(
+            path_prefix=alpha_fig_path,
+            probs=alpha_probs_soft,
+            y_true=alpha_true_soft,
+            class_names=alpha_class_names
+        )
+        metrics["alpha_probs_csv"] = str(alpha_csv_path)
+        q0_csv_path = save_probs_csv(
+            path_prefix=q0_avgprob_fig_path,
+            probs=q0_probs_soft,
+            y_true=q0_true_soft,
+            class_names=q0_class_names
+        )
+        metrics["q0_probs_csv"] = str(q0_csv_path)
+    else:
+        alpha_probs_soft = np.zeros((0, len(alpha_class_names)), dtype=float)
+        q0_probs_soft    = np.zeros((0, len(q0_class_names)), dtype=float)
     # --- NEW: optionally create α_s-focused figure here ---
+
     if make_alpha_fig:
-        
         plot_alpha_histograms(
             y_true_alpha=y_true['alpha'],
             y_pred_alpha=y_pred['alpha'],
@@ -281,230 +310,54 @@ def evaluate(loader, model, criterion, device, loss_weights=None,*,
             save_path=alpha_fig_path,
             show=False  # toggle True in notebooks if you want it displayed immediately
         )
+        
+        if alpha_fig_path:
+            base = os.path.splitext(alpha_fig_path)[0]
+            metrics["alpha_hist_path"] = base + ".png"
 
     if make_alpha_avgprob_fig:
         metrics["alpha_hist_path"] = alpha_fig_path  # report where it was saved (if any)
         plot_alpha_avgprob_histograms(
             y_true_alpha=y_true['alpha'],
-            y_alpha_proba=y_alpha_proba,
+            # y_alpha_proba=y_alpha_proba,
+            y_alpha_proba=alpha_probs_soft,
+
             class_names=[rf"$\alpha_s={c}$" for c in alpha_class_names],
             save_path=alpha_avgprob_fig_path,
             show=False
         )
         metrics["alpha_avgprob_hist_path"] = (alpha_avgprob_fig_path + ".png") if alpha_avgprob_fig_path else None
+        
+        plot_prob_heatmap(
+            probs=alpha_probs_soft,
+            y_true=alpha_true_soft,
+            class_names=[rf" $\alpha_s={c}$ " for c in alpha_class_names],
+            title=rf"$\alpha_s$: mean predicted distribution per true class",
+            save_path=alpha_avgprob_fig_path + "_heat_map",
+            show=False
+        )
+        metrics["alpha_heatmap_path"] = (alpha_avgprob_fig_path + "_heat_map.png") if alpha_avgprob_fig_path else None
+
     if make_q0_avgprob_fig:
         plot_q0_avgprob_histograms(
             y_true_q0=y_true['q0'],
-            y_q0_proba=y_q0_proba,
+            # y_q0_proba=y_q0_proba,
+            y_q0_proba=q0_probs_soft,
             class_names=[rf"$Q_0={c}$" for c in q0_class_names],
             save_path=q0_avgprob_fig_path,
             show=False
         )
         metrics["q0_avgprob_hist_path"] = (q0_avgprob_fig_path + ".png") if q0_avgprob_fig_path else None
+        plot_prob_heatmap(
+            probs=q0_probs_soft,
+            # y_true=y_true['q0'],
+            y_true=q0_true_soft,
+            class_names=[rf" $Q_0={c}$ " for c in q0_class_names],
+            title=rf"$Q_0$: mean predicted distribution per true class",
+            save_path=q0_avgprob_fig_path + "_heat_map",
+            show=False
+        )
+        metrics["q0_heatmap_path"] = (q0_avgprob_fig_path + "_heat_map.png") if q0_avgprob_fig_path else None
 
     return metrics
 
-# ---------------------------
-# α_s helpers (probabilities)
-# ---------------------------
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-def plot_alpha_histograms(
-                        y_true_alpha,
-                        y_pred_alpha,
-                        class_names=[r"$\alpha_s=0.2$", r"$\alpha_s=0.3$", r"$\alpha_s=0.4$"],
-                        figsize=(17, 5),
-                        suptitle="Predicted αₛ distribution per true αₛ bin",
-                        save_path=None,
-                        show=False,
-                      ):
-    """
-    Plot normalized histograms of predicted alpha_s values for each true alpha_s class.
-    Bars are normalized (sum=1) but annotated with raw count and probability.
-    Args:
-        y_true_alpha (array-like, shape [N]): ground-truth αₛ class indices {0,1,2}
-        y_pred_alpha (array-like, shape [N]): predicted αₛ class indices {0,1,2}
-        class_names (tuple[str]): display names for classes in index order
-        figsize (tuple): figure size
-        suptitle (str): figure title
-        save_path (str|None): if set, saves PNG to this path (creates dirs)
-        show (bool): if True, plt.show() (useful in notebooks)
-    Returns:
-        fig (matplotlib.figure.Figure): the created figure (also saved if save_path)
-    """
-
-    y_true_alpha = np.array(y_true_alpha)
-    y_pred_alpha = np.array(y_pred_alpha)
-    num_classes = len(class_names)
-
-    fig, axes = plt.subplots(1, num_classes, figsize=figsize, sharey=True,constrained_layout=True)
-
-    for i, ax in enumerate(axes):
-        # Select predictions where ground truth == i
-        mask = (y_true_alpha == i)
-        preds = y_pred_alpha[mask]
-
-        # Count raw occurrences
-        counts = np.bincount(preds, minlength=num_classes)
-        total = counts.sum()
-
-        # Normalize counts to probabilities
-        probs = counts / total if total > 0 else np.zeros_like(counts)
-
-        # Plot normalized histogram
-        ax.bar(range(num_classes), probs, tick_label=class_names,
-               alpha=0.7, color='C0', edgecolor='black')
-
-        # Add annotations with raw counts + probability
-        for j, (c, p) in enumerate(zip(counts, probs)):
-            ax.text(j, p + 0.02, f"{c} ({p:.2f})",
-                    ha='center', va='bottom', fontsize=10, clip_on=False)
-        
-        ax.grid(axis="y", linestyle="--", alpha=0.3)
-
-        ax.set_title(f"True {class_names[i]} (N={total})")
-        ax.set_ylabel("Normalized Frequency")
-
-    fig.suptitle(suptitle, y=1.05, fontsize=12)
-    fig.tight_layout()
-
-
-    if save_path is not None:
-        base = os.path.splitext(save_path)[0]  # allow ".png" or path without ext
-        os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
-        fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
-        fig.savefig(base + ".pdf", bbox_inches="tight")
-    if show:
-        plt.tight_layout()
-        plt.show()
-
-    return fig
-def plot_alpha_avgprob_histograms(
-    y_true_alpha,
-    y_alpha_proba,                        # shape (N, C), softmax probs per sample
-    class_names=(r"$\alpha_s=0.2$", r"$\alpha_s=0.3$", r"$\alpha_s=0.4$"),
-    figsize=(17, 5.5),
-    suptitle=r"Average predicted $\alpha_s$ probability per true $\alpha_s$",
-    save_path=None,
-    show=False,
-):
-    """
-    For each TRUE α_s class t, compute the mean predicted probability vector over all its samples:
-        avg_probs[t] = mean( y_alpha_proba[ y_true_alpha == t ] , axis=0 )
-    Then plot 3 bar charts (one per true α_s), bars = average probs for predicted classes.
-    """
-    y_true_alpha = np.asarray(y_true_alpha, dtype=int)
-    y_alpha_proba = np.asarray(y_alpha_proba, dtype=float)
-    C = len(class_names)
-
-    # compute avg probs per true class
-    avg_probs = np.zeros((C, C), dtype=float)
-    Ns = np.zeros(C, dtype=int)
-    for t in range(C):
-        mask = (y_true_alpha == t)
-        Ns[t] = int(mask.sum())
-        if Ns[t] > 0:
-            avg_probs[t] = y_alpha_proba[mask].mean(axis=0)
-
-    # figure
-    fig, axes = plt.subplots(1, C, figsize=figsize, sharey=True, constrained_layout=True)
-    if C == 1:
-        axes = [axes]
-    x = np.arange(C)
-
-    # global headroom to avoid label clipping
-    ymax = float(np.max(avg_probs)) if avg_probs.size else 1.0
-    ylim_top = max(0.05, min(1.05, ymax + 0.12))
-
-    for t, ax in enumerate(axes):
-        bars = ax.bar(x, avg_probs[t], edgecolor="black", alpha=0.85, tick_label=class_names)
-        ax.set_ylim(0, ylim_top)
-        ax.set_title(f"True {class_names[t]} (N={Ns[t]})")
-        if t == 0:
-            ax.set_ylabel("Average probability")
-
-        # annotate value on each bar
-        for j, b in enumerate(bars):
-            h = b.get_height()
-            ax.text(b.get_x()+b.get_width()/2, h + 0.02, f"{h:.3f}",
-                    ha="center", va="bottom", fontsize=10, clip_on=False)
-
-        ax.grid(axis="y", linestyle="--", alpha=0.3)
-
-    fig.suptitle(suptitle, y=1.05, fontsize=12)
-
-    if save_path:
-        base = os.path.splitext(save_path)[0]  # allow ".png" or path without ext
-        os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
-        fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
-        fig.savefig(base + ".pdf", bbox_inches="tight")
-
-    if show:
-        plt.show()
-    return fig
-
-
-# Plot Q0 average probability histograms
-def plot_q0_avgprob_histograms(
-    y_true_q0,
-    y_q0_proba,                        # shape (N, 4), softmax probs per sample
-    class_names=(r"$Q_0=1.0$", r"$Q_0=1.5$", r"$Q_0=2.0$", r"$Q_0=2.5$"),
-    figsize=(21, 5.5),
-    suptitle=r"Average predicted $Q_0$ probability per true $Q_0$",
-    save_path=None,
-    show=False,
-):
-    """
-    For each TRUE Q0 class t, compute the mean predicted probability vector over all its samples:
-        avg_probs[t] = mean( y_q0_proba[ y_true_q0 == t ] , axis=0 )
-    Then plot 4 bar charts (one per true Q0), bars = average probs for predicted classes.
-    """
-    y_true_q0 = np.asarray(y_true_q0, dtype=int)
-    y_q0_proba = np.asarray(y_q0_proba, dtype=float)
-    C = len(class_names)
-
-    # compute avg probs per true class
-    avg_probs = np.zeros((C, C), dtype=float)
-    Ns = np.zeros(C, dtype=int)
-    for t in range(C):
-        mask = (y_true_q0 == t)
-        Ns[t] = int(mask.sum())
-        if Ns[t] > 0:
-            avg_probs[t] = y_q0_proba[mask].mean(axis=0)
-
-    # figure
-    fig, axes = plt.subplots(1, C, figsize=figsize, sharey=True, constrained_layout=True)
-    if C == 1:
-        axes = [axes]
-    x = np.arange(C)
-
-    ymax = float(np.max(avg_probs)) if avg_probs.size else 1.0
-    ylim_top = max(0.05, min(1.05, ymax + 0.12))
-
-    for t, ax in enumerate(axes):
-        bars = ax.bar(x, avg_probs[t], edgecolor="black", alpha=0.85, tick_label=class_names)
-        ax.set_ylim(0, ylim_top)
-        ax.set_title(f"True {class_names[t]} (N={Ns[t]})")
-        if t == 0:
-            ax.set_ylabel("Average probability")
-
-        for j, b in enumerate(bars):
-            h = b.get_height()
-            ax.text(b.get_x()+b.get_width()/2, h + 0.02, f"{h:.3f}",
-                    ha="center", va="bottom", fontsize=10, clip_on=False)
-
-        ax.grid(axis="y", linestyle="--", alpha=0.3)
-
-    fig.suptitle(suptitle, y=1.05, fontsize=12)
-
-    if save_path:
-        base = os.path.splitext(save_path)[0]
-        os.makedirs(os.path.dirname(base) or ".", exist_ok=True)
-        fig.savefig(base + ".png", dpi=300, bbox_inches="tight")
-        fig.savefig(base + ".pdf", bbox_inches="tight")
-
-    if show:
-        plt.show()
-    return fig
