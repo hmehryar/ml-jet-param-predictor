@@ -1,0 +1,10 @@
+{
+  "lambda_energy": 0.85073835615208,
+  "lambda_alpha": 1.091403963907181,
+  "lambda_q0": 2.651851651535991,
+  "q0_f1": 0.10236220472440945,
+  "alpha_acc": 0.33663366336633666,
+  "energy_acc": 0.7425742574257426,
+  "q0_acc": 0.25742574257425743,
+  "model_tag": "ViT_tiny_patch16_224_gaussian_lrp_60_rlrp_12_q0_emphasis_HPO_lam_0.85_1.09_2.65"
+}
