@@ -168,3 +168,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Example: 16 trials, 8 epochs per trial for speed
+# python tools/tune_loss_weights.py \
+#   --config configs/vit_q0_emphasis.yaml \
+#   --trials 16 \
+#   --hpo-epochs 8 \
+#   --study-name tune_lw_vit \
+#   --storage sqlite:///optuna_loss_weights.db \
+#   --baseline-json experiments/baseline_vit_metrics.json
