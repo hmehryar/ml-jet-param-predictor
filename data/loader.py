@@ -183,7 +183,7 @@ def load_split_from_csv(filename, root_dir):
     with open(filename, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            relative_path = row['file_path']
+            relative_path = row['file_paths']
             absolute_path = os.path.join(root_dir, relative_path)  # Rebuild full path
             label = (int(row['energy_loss']), int(row['alpha']), int(row['q0']))
             result.append((absolute_path, label))

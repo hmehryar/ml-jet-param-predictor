@@ -100,6 +100,8 @@ def get_config(config_path=None):
     if not (loss_cfg.get("weights") is None):
         # concatenate loss weights into a string and separate them with __annotations__
         weighted_loss="_weighted_loss{}".format("_".join([f"{k}_{v}" for k, v in loss_weights.items()]))
+    else:
+        weighted_loss = ""
     # --- Split CSV Paths based on group_size ---
     if group_size > 1 :
         basename     = f"file_labels_aggregated_ds{dataset_size}_g{group_size}"
