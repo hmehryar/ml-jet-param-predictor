@@ -86,6 +86,7 @@ def get_config(config_path=None):
         'verbose': True
     }
     scheduler=cfg_dict.get('scheduler', scheduler_defaults)
+    preloaded = ""
     preload_model_path = cfg_dict.get("preload_model_path")
     if preload_model_path:
         preloaded="_preloaded"

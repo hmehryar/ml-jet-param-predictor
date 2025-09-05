@@ -1,0 +1,52 @@
+[
+  {
+    "model": "MambaOut_base_plus_rw",
+    "Acc_energy": 100.0,
+    "F1_energy": 100.0,
+    "Acc_alpha": 93.89,
+    "F1_alpha": 93.9,
+    "Acc_q0": 75.21,
+    "F1_q0": 74.98,
+    "Acc_total": 69.1
+  },
+  {
+    "model": "ConvNeXt_Gaussian_g500",
+    "Acc_energy": 100.0,
+    "F1_energy": 100.0,
+    "Acc_alpha": 93.54,
+    "F1_alpha": 93.53,
+    "Acc_q0": 74.1,
+    "F1_q0": 73.59,
+    "Acc_total": 67.64
+  },
+  {
+    "model": "Swin_g500",
+    "Acc_energy": 99.79,
+    "F1_energy": 99.72,
+    "Acc_alpha": 88.19,
+    "F1_alpha": 88.1,
+    "Acc_q0": 63.06,
+    "F1_q0": 61.96,
+    "Acc_total": 51.39
+  },
+  {
+    "model": "ViT_tiny_patch16_224_gaussian_lrp_12_rlrp_4",
+    "Acc_energy": 100.0,
+    "F1_energy": 100.0,
+    "Acc_alpha": 95.83,
+    "F1_alpha": 95.83,
+    "Acc_q0": 78.19,
+    "F1_q0": 77.57,
+    "Acc_total": 74.03
+  },
+  {
+    "model": "EfficientNet_g500",
+    "Acc_energy": 100.0,
+    "F1_energy": 100.0,
+    "Acc_alpha": 94.72,
+    "F1_alpha": 94.71,
+    "Acc_q0": 70.21,
+    "F1_q0": 68.79,
+    "Acc_total": 64.93
+  }
+]
