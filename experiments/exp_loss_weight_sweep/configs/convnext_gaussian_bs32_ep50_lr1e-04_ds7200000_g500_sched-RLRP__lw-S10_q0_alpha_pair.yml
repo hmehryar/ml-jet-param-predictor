@@ -1,0 +1,27 @@
+model_tag: ConvNeXt_Gaussian_g500__lw-S10_q0_alpha_pair
+backbone: convnext_gaussian
+batch_size: 32
+epochs: 50
+learning_rate: 0.0001
+patience: 12
+input_shape: [1, 32, 32]
+global_max: 121.79151153564453
+output_dir: experiments/exp_loss_weight_sweep/training_output/
+dataset_subdir: jet_ml_benchmark_config_01_to_09_alpha_0.2_0.3_0.4_q0_1.5_2.0_2.5_MMAT_MLBT_size_7200000_balanced_unshuffled/
+group_size: 500
+dataset_size: 7200000
+use_val_folds: true
+fold_index: 1
+test_csv_same_as_val_fold: true
+scheduler:
+  type: ReduceLROnPlateau
+  mode: max
+  factor: 0.5
+  patience: 4
+  verbose: true
+loss:
+  weights:
+    energy_loss_output: 0.7
+    alpha_output: 1.0
+    q0_output: 1.3
+preload_model_path: experiments/exp_best_trained_models/training_output/ConvNeXt_tiny_Gaussian_g500_bs32_ep50_lr1e-04_ds7200000_g500_sched_ReduceLROnPlateau/best_model.pth

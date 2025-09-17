@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=mamba-bs16-ep50-lre04-ds7.2M
+#SBATCH --job-name=swin-s10
 
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=10G
+#SBATCH --mem=8G
 #SBATCH --time=504:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,6 +18,7 @@
 ##SBATCH --nodes=1
 ##SBATCH --ntasks=4
 ##SBATCH --qos=gpu
+
 
 nvidia-smi
 

@@ -183,8 +183,13 @@ def load_split_from_csv(filename, root_dir):
     with open(filename, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            relative_path = row['file_paths']
-            absolute_path = os.path.join(root_dir, relative_path)  # Rebuild full path
+            # Support both non-aggregated ('file_path') and aggregated ('file_paths')
+            rel = row.get('file_path') or row.get('file_paths')
+            if rel is None:
+                raise KeyError(f"CSV {filename} missing 'file_path' or 'file_paths' column.")
+            absolute_path = os.path.join(root_dir, rel)
+            # relative_path = row['file_paths']
+            # absolute_path = os.path.join(root_dir, relative_path)  # Rebuild full path
             label = (int(row['energy_loss']), int(row['alpha']), int(row['q0']))
             result.append((absolute_path, label))
     return result

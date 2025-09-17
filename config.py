@@ -112,6 +112,34 @@ def get_config(config_path=None):
     val_csv      = os.path.join(dataset_root_dir, f"{basename}_val.csv")
     test_csv     = os.path.join(dataset_root_dir, f"{basename}_test.csv")
 
+    # Optional: fold-aware routing over the OLD validation set
+    use_val_folds = bool(cfg_dict.get("use_val_folds", False))
+    test_csv_same_as_val_fold = bool(cfg_dict.get("test_csv_same_as_val_fold", False))
+    if use_val_folds:
+        fold_index = cfg_dict.get("fold_index", None)
+        if fold_index is None:
+            raise ValueError("use_val_folds=True requires 'fold_index' (0..n_splits-1) in the config.")
+
+        # Your convention:
+        #  - aggregated: file_labels_aggregated_ds{dataset_size}_g{group_size}_val_folds_out
+        #  - non-aggregated: file_labels_val_folds_out
+        if group_size > 1:
+            folds_dir = f"{basename}_val_folds_out"
+        else:
+            folds_dir = "file_labels_val_folds_out"
+
+        folds_root = os.path.join(dataset_root_dir, folds_dir)
+        train_csv = os.path.join(folds_root, f"fold{fold_index}_train.csv")
+        val_csv   = os.path.join(folds_root, f"fold{fold_index}_val.csv")
+
+        # For pure CV you can either:
+        #  (a) keep the original test set, or
+        #  (b) evaluate the held-out fold as "test" per run:
+        if test_csv_same_as_val_fold:
+            test_csv = val_csv
+        else:
+            test_csv=""
+
     scheduler_type = scheduler.get('type', 'NoScheduler')
     run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}{preloaded}{weighted_loss}"
     output_dir = os.path.join(output_base, run_tag)
