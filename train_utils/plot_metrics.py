@@ -101,6 +101,27 @@ def plot_loss_accuracy(loss_list,
     plt.show()
     plt.close()
 
+import matplotlib as mpl
+#  --- Global plot style ---
+mpl.rcParams.update({
+    "font.size": 15,           # global font size
+    "axes.titlesize": 15,      # title font size
+    "axes.labelsize": 15,      # x and y labels
+    "xtick.labelsize": 13,
+    "ytick.labelsize": 13,
+    "legend.fontsize": 13,
+    "figure.titlesize": 16,
+    "image.cmap": "Oranges",   # set global colormap
+    "axes.prop_cycle": plt.cycler(color=["orange"]),  # <- all bars/lines orange
+    # --- default edge color for patches (bars, hist bars, etc.) ---
+    "patch.edgecolor": "black",
+
+    # layout / suptitle spacing
+    "figure.autolayout": False,   # keep manual control
+    "figure.subplot.top": 0.88    # controls suptitle y position (0–1)
+})
+# when calling bar/hist, force alpha separately
+default_alpha = 0.7
 def plot_confusion_matrices(metrics_dict, output_dir,color_map="Oranges"):
     """
     Plots and saves confusion matrices from a best_metrics-style dict.
