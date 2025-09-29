@@ -143,7 +143,10 @@ def get_config(config_path=None):
     scheduler_type = scheduler.get('type', 'NoScheduler')
     run_tag = f"{model_tag}_bs{batch_size}_ep{epochs}_lr{learning_rate:.0e}_ds{dataset_size}_g{group_size}_sched_{scheduler_type}{preloaded}{weighted_loss}"
     output_dir = os.path.join(output_base, run_tag)
-
+    # Add fold suffix if using CV folds
+    if use_val_folds and fold_index is not None:
+        output_dir = os.path.join(output_dir, f"fold_{fold_index}")
+        
     return SimpleNamespace(**{
         "model_tag": model_tag,
         "backbone": backbone,
