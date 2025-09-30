@@ -1,7 +1,7 @@
 model_tag: ViT_tiny_patch16_224_gaussian_lrp_60_rlrp_12_q0_emphasis__lw-S9_q0_very_mild
 backbone: vit_gaussian
 batch_size: 32
-epochs: 2
+epochs: 50
 learning_rate: 0.0001
 patience: 12
 input_shape: [1, 32, 32]

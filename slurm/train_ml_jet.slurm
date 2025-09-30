@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=swin-s6-f4
+#SBATCH --job-name=vit-s10-f1
 
 #SBATCH --partition=ecscp
 #SBATCH --gres=gpu:nvidia_a100_80gb_pcie_1g.10gb:1
